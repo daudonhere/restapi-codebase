@@ -50,3 +50,13 @@ export const archiveActivity = async () => {
     client.release();
   }
 };
+
+archiveActivity()
+  .then(() => {
+    console.log("activity archive completed");
+    process.exit(0);
+  })
+  .catch((err) => {
+    console.error("failed to archive activity", err);
+    process.exit(1);
+  });

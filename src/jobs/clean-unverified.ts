@@ -19,3 +19,13 @@ export const cleanUnverified = async () => {
     console.error("cleanupUnverified error :", err);
   }
 };
+
+cleanUnverified()
+  .then(() => {
+    console.log("cleanup unverified completed");
+    process.exit(0);
+  })
+  .catch((err) => {
+    console.error("failed to cleanup unverified cause", err);
+    process.exit(1);
+  });

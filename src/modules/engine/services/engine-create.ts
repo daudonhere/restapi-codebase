@@ -20,3 +20,13 @@ export const autoRegisterModules = async () => {
   }
   console.log("module registry synchronized");
 };
+
+autoRegisterModules()
+  .then(() => {
+    console.log("engine modules synchronized");
+    process.exit(0);
+  })
+  .catch((err) => {
+    console.error("failed to synchronize modules ", err);
+    process.exit(1);
+  });

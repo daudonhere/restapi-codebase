@@ -18,3 +18,13 @@ export const cleanSoftDeleted = async () => {
     console.error("cleanupSoftDeleted error:", err);
   }
 };
+
+cleanSoftDeleted()
+  .then(() => {
+    console.log("cleanup soft-deleted completed");
+    process.exit(0);
+  })
+  .catch((err) => {
+    console.error("failed to cleanup soft-deleted cause", err);
+    process.exit(1);
+  });
