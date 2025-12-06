@@ -17,6 +17,8 @@ const app: Express = express();
 const PORT = process.env.PORT;
 const HOST = process.env.HOST;
 
+app.set("trust proxy", true);
+
 app.use(cors());
 app.use(express.json());
 app.use(cookieParser());

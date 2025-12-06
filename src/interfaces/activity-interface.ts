@@ -23,7 +23,17 @@ export interface ActivityContextInterface {
   method: string;
   ip: string | null;
   userAgent: string | null;
+  device?: {
+    browser: string | null;
+    browserVersion: string | null;
+    os: string | null;
+    osVersion: string | null;
+    deviceModel: string | null;
+    deviceType: string | null;
+    engine: string | null;
+  };
 }
+
 
 export interface ActivityLogInterface {
   id: string;
