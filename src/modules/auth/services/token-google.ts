@@ -5,11 +5,12 @@ import crypto from "crypto";
 import { ResponsError } from "../../../constants/respons-error";
 import { Code } from "../../../constants/message-code";
 import { GoogleUserInterface } from "../../../interfaces/google-interface";
-import { findUserByEmailModel  } from "../../user/models/user-read";
+import { findUserByEmailModel } from "../../user/models/user-read";
 import { createUserModel, setUserAsVerifiedModel } from "../../user/models/user-create";
 import { updateLastLoginModel } from "../../user/models/user-update";
 import { generateAccessToken, generateRefreshToken, getRefreshExpiresAt, saveRefreshToken, toMs } from "../controllers/token-manage";
 import { withActivityLog } from "../../activity/controllers/activity-wrapper";
+import { generatePhrase } from "../../../utils/phrase";
 
 dotenv.config();
 
@@ -41,8 +42,8 @@ export const getGoogleAuthURLService = (): string => {
     prompt: "consent",
     scope: [
       "https://www.googleapis.com/auth/userinfo.email",
-      "https://www.googleapis.com/auth/userinfo.profile",
-    ].join(" "),
+      "https://www.googleapis.com/auth/userinfo.profile"
+    ].join(" ")
   });
   return `${rootUrl}?${params.toString()}`;
 };
@@ -51,7 +52,7 @@ export const getGoogleUserService = async (code: string): Promise<GoogleUserInte
   const { tokens } = await client.getToken(code);
   client.setCredentials(tokens);
   const response = await client.request<GoogleUserInterface>({
-    url: "https://www.googleapis.com/oauth2/v2/userinfo",
+    url: "https://www.googleapis.com/oauth2/v2/userinfo"
   });
   return response.data;
 };
@@ -59,7 +60,7 @@ export const getGoogleUserService = async (code: string): Promise<GoogleUserInte
 export const handleGoogleLoginService = withActivityLog(
   {
     module: "auth",
-    action: "google login",
+    action: "google login"
   },
 
   async (context, code: string) => {
@@ -72,6 +73,7 @@ export const handleGoogleLoginService = withActivityLog(
     }
 
     let user = await findUserByEmailModel(googleUser.email, true);
+    let createdPhrase: string | null = null;
 
     if (user) {
       if (user.is_delete) {
@@ -87,16 +89,20 @@ export const handleGoogleLoginService = withActivityLog(
     } else {
       const randomPassword = crypto.randomBytes(20).toString("hex");
       const hashedPassword = await bcrypt.hash(randomPassword, 10);
-      const fullname =
-        googleUser.name ?? googleUser.given_name ?? "Google User";
+      const fullname = googleUser.name ?? googleUser.given_name ?? "Google User";
+
+      const phrase = generatePhrase();
+      const hashedPhrase = await bcrypt.hash(phrase, 10);
+      createdPhrase = phrase;
 
       user = await createUserModel(
         googleUser.email,
         hashedPassword,
         fullname,
         "google",
-        null,
-        null
+        context.ip,
+        context.userAgent,
+        hashedPhrase
       );
 
       await setUserAsVerifiedModel(user.id);
@@ -112,12 +118,13 @@ export const handleGoogleLoginService = withActivityLog(
     if (!user) {
       throw new ResponsError(Code.INTERNAL_SERVER_ERROR, "failed to load user");
     }
+
     await updateLastLoginModel(user.id);
 
     const accessToken = generateAccessToken({
       id: user.id,
       email: user.email,
-      roles: user.roles,
+      roles: user.roles
     });
 
     const refreshToken = generateRefreshToken({ id: user.id });
@@ -136,8 +143,11 @@ export const handleGoogleLoginService = withActivityLog(
       result: {
         accessToken,
         refreshToken,
-        user
-      },
+        user: {
+          ...user,
+          phrase: createdPhrase
+        }
+      }
     };
   }
 );

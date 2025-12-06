@@ -10,6 +10,7 @@ import { updateLastLoginModel } from "../../user/models/user-update";
 import { GithubTokenResponseInterface, GithubUserResponseInterface, GithubEmailResponseInterface } from "../../../interfaces/github-interface";
 import { generateAccessToken, generateRefreshToken, getRefreshExpiresAt, saveRefreshToken, toMs } from "../controllers/token-manage";
 import { withActivityLog } from "../../activity/controllers/activity-wrapper";
+import { generatePhrase } from "../../../utils/phrase";
 
 dotenv.config();
 
@@ -25,7 +26,7 @@ const getGithubAccessToken = async (code: string): Promise<string> => {
     client_id: GITHUB_CLIENT_ID,
     client_secret: GITHUB_CLIENT_SECRET,
     code,
-    redirect_uri: GITHUB_REDIRECT_URI,
+    redirect_uri: GITHUB_REDIRECT_URI
   };
 
   const response = await axios.post<GithubTokenResponseInterface>(
@@ -44,7 +45,7 @@ const getGithubAccessToken = async (code: string): Promise<string> => {
 
 const getGithubUserProfile = async (accessToken: string): Promise<GithubUserResponseInterface> => {
   const res = await axios.get("https://api.github.com/user", {
-    headers: { Authorization: `token ${accessToken}` },
+    headers: { Authorization: `token ${accessToken}` }
   });
   return res.data;
 };
@@ -64,12 +65,11 @@ export const processGithubLoginService = withActivityLog(
 
   async (context, code: string) => {
     const beforeData = { code };
-    let userEmail: string | null = null;
     const accessTokenGithub = await getGithubAccessToken(code);
 
     const profile = await getGithubUserProfile(accessTokenGithub);
+    const userEmail = await getGithubUserEmail(accessTokenGithub);
 
-    userEmail = await getGithubUserEmail(accessTokenGithub);
     if (!userEmail) {
       throw new ResponsError(
         Code.NOT_FOUND,
@@ -78,6 +78,7 @@ export const processGithubLoginService = withActivityLog(
     }
 
     let user = await findUserByEmailModel(userEmail, true);
+    let createdPhrase: string | null = null;
 
     if (user) {
       if (user.is_delete) {
@@ -92,15 +93,21 @@ export const processGithubLoginService = withActivityLog(
       }
     } else {
       const randomPass = crypto.randomBytes(20).toString("hex");
-      const hashed = await bcrypt.hash(randomPass, 10);
+      const hashedPass = await bcrypt.hash(randomPass, 10);
+      const fullname = profile.name || profile.login;
+
+      const phrase = generatePhrase();
+      const hashedPhrase = await bcrypt.hash(phrase, 10);
+      createdPhrase = phrase;
 
       user = await createUserModel(
         userEmail,
-        hashed,
-        profile.name || profile.login,
+        hashedPass,
+        fullname,
         "github",
-        null,
-        null
+        context.ip,
+        context.userAgent,
+        hashedPhrase
       );
 
       await setUserAsVerifiedModel(user.id);
@@ -122,16 +129,17 @@ export const processGithubLoginService = withActivityLog(
     const accessToken = generateAccessToken({
       id: user.id,
       email: user.email,
-      roles: user.roles,
+      roles: user.roles
     });
-    const refreshToken = generateRefreshToken({ id: user.id });
 
+    const refreshToken = generateRefreshToken({ id: user.id });
     const expiresAt = getRefreshExpiresAt(toMs);
+
     await saveRefreshToken(user.id, refreshToken, expiresAt);
 
     const afterData = {
       userId: user.id,
-      source: "github",
+      source: "github"
     };
 
     return {
@@ -142,9 +150,12 @@ export const processGithubLoginService = withActivityLog(
       result: {
         accessToken,
         refreshToken,
-        user
+        user : {
+          ...user,
+          phrase: createdPhrase
+        }
       },
-      description: "github login successful",
+      description: "github login successful"
     };
   }
 );

@@ -8,18 +8,19 @@ export const createUserModel = async (
   fullname: string,
   source: "email" | "google" | "github",
   ip_address: string | null,
-  user_agent: string | null
+  user_agent: string | null,
+  passphrase: string | null
 ): Promise<UserInterface> => {
   const client = await config.connect();
   try {
     await client.query("BEGIN");
     const userResult: QueryResult = await client.query(
       `
-      INSERT INTO tb_user (email, password, fullname, source, ip_address, user_agent)
-      VALUES ($1, $2, $3, $4, $5, $6)
+      INSERT INTO tb_user (email, password, fullname, source, ip_address, user_agent, passphrase)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
       RETURNING *
       `,
-      [email, password, fullname, source, ip_address, user_agent]
+      [email, password, fullname, source, ip_address, user_agent, passphrase]
     );
 
     const user = userResult.rows[0];

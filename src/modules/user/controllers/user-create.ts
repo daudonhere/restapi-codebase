@@ -82,7 +82,7 @@ export const createUserController = async (
     const context = req.activityContext;
     if (!context) throw new Error("activity context missing");
 
-    const { user, emailSent } = await createUserService(context, req.body);
+    const { user, emailSent, phrase } = await createUserService(context, req.body);
     
     const description = emailSent
       ? "user created successfully and verification email sent"
@@ -96,7 +96,8 @@ export const createUserController = async (
         fullname: user.fullname,
         email: user.email,
         source: user.source,
-        emailSent
+        emailSent,
+        phrase
       },
     );
   } catch (err) {

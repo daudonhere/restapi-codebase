@@ -19,6 +19,7 @@ import {
   toMs 
 } from "../../auth/controllers/token-manage";
 import { withActivityLog } from "../../activity/controllers/activity-wrapper";
+import { generatePhrase } from "../../../utils/phrase";
 
 const generateVerificationCode = (): string =>
   crypto.randomInt(100000, 999999).toString();
@@ -113,9 +114,7 @@ export const createUserService = withActivityLog(
       throw new ResponsError(Code.BAD_REQUEST, "email provider not allowed");
 
     const existing = await findUserByEmailModel(email, true);
-
     if (existing) {
-
       if (existing.is_delete) {
         throw new ResponsError(
           Code.FORBIDDEN,
@@ -128,28 +127,35 @@ export const createUserService = withActivityLog(
           Code.CONFLICT,
           `registered via ${existing.source}`
         );
+
       throw new ResponsError(Code.CONFLICT, "email already registered");
     }
 
-    const hashed = await bcrypt.hash(password, 10);
+    const phrase = generatePhrase();
+    const hashedPhrase = await bcrypt.hash(phrase, 10);
+    const hashedPassword = await bcrypt.hash(password, 10);
 
     const user = await createUserModel(
       email,
-      hashed,
+      hashedPassword,
       fullname,
       "email",
       context.ip,
-      context.userAgent
+      context.userAgent,
+      hashedPhrase 
     );
 
     await deleteTokenByUserAndTypeModel(user.id, "verify");
+
     const code = generateVerificationCode();
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
     await saveTokenModel(user.id, code, "verify", expiresAt);
 
     sendVerificationEmail(email, code)
       .then(() => console.log(`email sent to ${email} in background`))
-      .catch((err) => console.error(`failed to send email to ${email} cause`, err));
+      .catch((err) =>
+        console.error(`failed to send email to ${email} cause`, err)
+      );
 
     const afterData = {
       id: user.id,
@@ -164,11 +170,18 @@ export const createUserService = withActivityLog(
       statusCode: Code.CREATED,
       beforeData,
       afterData,
-      result: { user, emailSent: true },
+      result: { 
+        user: {
+          ...user,
+          phrase
+        },
+        emailSent: true,
+      },
       description: "user created, email sending in background"
     };
   }
 );
+
 
 export const restoreUserByIdService = withActivityLog(
   { module: "user", action: "restore user" },
