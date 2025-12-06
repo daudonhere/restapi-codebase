@@ -8,6 +8,7 @@ import { ResponsError } from "./constants/respons-error";
 import { ResponsSuccess } from "./constants/respons-success";
 import { Code } from "./constants/message-code";
 import { activityContextMiddleware } from "./middlewares/activity-context";
+import cookieParser from "cookie-parser";
 import routes from "./routes/v1";
 
 dotenv.config();
@@ -18,6 +19,7 @@ const HOST = process.env.HOST;
 
 app.use(cors());
 app.use(express.json());
+app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
 app.use(activityContextMiddleware);
 app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));

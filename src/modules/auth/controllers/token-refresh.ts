@@ -10,19 +10,21 @@ export const refreshController = async (
   next: NextFunction
 ): Promise<Response | void> => {
   try {
-    const { refreshToken } = req.body;
+    const refreshToken = req.cookies?.refreshToken;
+
     if (!refreshToken) {
-      throw new ResponsError(
-        Code.UNAUTHORIZED,
-        "refresh token is required."
-      );
+      throw new ResponsError(Code.UNAUTHORIZED, "refresh token is missing.");
     }
 
     const context = req.activityContext;
     if (!context) throw new Error("activity context missing");
 
     const data = await refreshAccessTokenService(context, refreshToken);
-    return ResponsSuccess(res, Code.OK, "access token refreshed", data);
+
+    return ResponsSuccess(res, Code.OK, "access token refreshed", {
+      accessToken: data.accessToken
+    });
+
   } catch (err) {
     next(err);
   }
