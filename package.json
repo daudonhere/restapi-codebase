@@ -1,0 +1,61 @@
+{
+  "name": "backend-espro",
+  "version": "1.0.0",
+  "description": "Espro backend using Express.js",
+  "homepage": "https://github.com/daudonhere/backend-espro#readme",
+  "bugs": {
+    "url": "https://github.com/daudonhere/backend-espro/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/daudonhere/backend-espro.git"
+  },
+  "license": "ISC",
+  "author": "daudonhere",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/app.js",
+    "dev": "ts-node-dev --respawn --transpile-only --watch .env src/app.ts",
+    "nodemon": "nodemon --watch src --ext ts,env --exec ts-node src/app.ts",
+    "migrate": "node-pg-migrate --migration-dir=src/migrations --require=ts-node/register",
+    "engine": "ts-node src/modules/engine/services/engine-create.ts",
+    "archive": "ts-node src/jobs/archive-activity.ts",
+    "clean:unverified": "ts-node src/jobs/clean-unverified.ts",
+    "clean:softdeleted": "ts-node src/jobs/clean-softdeleted.ts"
+  },
+  "dependencies": {
+    "axios": "^1.13.1",
+    "bcrypt": "^6.0.0",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
+    "google-auth-library": "^10.5.0",
+    "jsonwebtoken": "^9.0.2",
+    "node-cron": "^4.2.1",
+    "node-pg-migrate": "^8.0.3",
+    "nodemailer": "^7.0.10",
+    "pg": "^8.16.3",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.1",
+    "yamljs": "^0.3.0"
+  },
+  "devDependencies": {
+    "@types/bcrypt": "^6.0.0",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.5",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/node": "^24.9.2",
+    "@types/node-cron": "^3.0.11",
+    "@types/nodemailer": "^7.0.3",
+    "@types/pg": "^8.15.6",
+    "@types/swagger-jsdoc": "^6.0.4",
+    "@types/swagger-ui-express": "^4.1.8",
+    "@types/yamljs": "^0.2.34",
+    "nodemon": "^3.1.10",
+    "ts-node": "^10.9.2",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.9.3"
+  }
+}

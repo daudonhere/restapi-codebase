@@ -1,0 +1,488 @@
+tags:
+  - name: User Management
+    description: Endpoints to manage all users.
+
+paths:
+
+  /user/create:
+    post:
+      summary: Create a new user (public registration)
+      tags: [User Management]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [fullname, email, password]
+              properties:
+                fullname:
+                  type: string
+                  example: "Jane Doe"
+                email:
+                  type: string
+                  example: "jane@example.com"
+                password:
+                  type: string
+                  example: "SecurePass123"
+      responses:
+        201:
+          description: User created successfully.
+          content:
+            application/json:
+              example:
+                result:
+                  data:
+                    id: "b2c3d4e5-f6a7-8901-b2c3-d4e5f6a7b8c9"
+                    fullname: "Jane Doe"
+                    email: "jane@example.com"
+                    source: "email"
+                    is_verified: false
+                    emailSent: true
+                code: 201
+                message: "Created - Resource created successfully"
+                description: "User created. Verification email sent."
+        400:
+          description: Invalid body.
+        409:
+          description: Email already registered.
+
+  /user/verif/send:
+    post:
+      summary: Send email verification code
+      tags: [User Management]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email:
+                  type: string
+                  example: "user@example.com"
+      responses:
+        200:
+          description: Verification code sent
+          content:
+            application/json:
+              example:
+                result:
+                  data:
+                    emailSent: true
+                    message: "Verification code sent successfully."
+                code: 200
+                message: "OK"
+                description: "Verification code sent successfully."
+        404:
+          description: User not found
+
+  /user/verif/confirm:
+    post:
+      summary: Verify user's email using code
+      tags: [User Management]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, code]
+              properties:
+                email:
+                  type: string
+                  example: "user@example.com"
+                code:
+                  type: string
+                  example: "123456"
+      responses:
+        200:
+          description: Email verified successfully
+          content:
+            application/json:
+              example:
+                result:
+                  data:
+                    accessToken: "jwt.token"
+                    refreshToken: "refresh.token"
+                    user:
+                      id: "uuid"
+                      email: "user@example.com"
+                      is_verified: true
+                code: 200
+                message: "OK"
+                description: "Email verified successfully."
+        400:
+          description: Invalid code
+        409:
+          description: Already verified
+
+  /user/show/all:
+    get:
+      summary: Get all users (login required)
+      tags: [User Management]
+      security:
+        - bearerAuth: []
+      responses:
+        200:
+          description: List of users retrieved successfully.
+          content:
+            application/json:
+              example:
+                result:
+                  data:
+                    - id: "a1b2c3..."
+                      fullname: "Super Admin"
+                      avatar: null
+                      email: "super@admin.com"
+                      phone: "08123456789"
+                      source: "email"
+                      is_verified: true
+                      login_at: "2025-11-10T10:00:00.000Z"
+                      created_at: "2025-11-01T10:00:00.000Z"
+                      updated_at: "2025-11-10T10:00:00.000Z"
+                      roles: ["superadmin", "user"]
+                code: 200
+                message: "OK - Request successful"
+                description: "Users retrieved successfully."
+        401:
+          description: Unauthorized
+
+  /user/email/{email}:
+    get:
+      summary: Get user by email
+      tags: [User Management]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: email
+          required: true
+          schema:
+            type: string
+          example: "john@example.com"
+      responses:
+        200:
+          description: User fetched successfully.
+          content:
+            application/json:
+              example:
+                result:
+                  data:
+                    id: "a1b2c3..."
+                    fullname: "John Doe"
+                    email: "john@example.com"
+                    source: "email"
+                    is_verified: true
+                    roles: ["user"]
+                code: 200
+                message: "OK - Request successful"
+                description: "User retrieved successfully."
+        404:
+          description: User not found.
+
+  /user/show/{id}:
+    get:
+      summary: Get user by ID
+      tags: [User Management]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        200:
+          description: User details retrieved successfully.
+          content:
+            application/json:
+              example:
+                result:
+                  data:
+                    id: "a1b2c3..."
+                    fullname: "Super Admin"
+                    email: "super@admin.com"
+                    source: "email"
+                    is_verified: true
+                    roles: ["superadmin", "user"]
+                code: 200
+                message: "OK - Request successful"
+                description: "User retrieved successfully."
+        404:
+          description: User not found.
+
+  /user/roles/{id}:
+    put:
+      summary: Update roles for a user (Admin & Superadmin ONLY)
+      tags: [User Management]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [roles]
+              properties:
+                roles:
+                  type: array
+                  items:
+                    type: string
+                  example: ["administrator", "user"]
+      responses:
+        200:
+          description: User roles updated successfully.
+          content:
+            application/json:
+              example:
+                result:
+                  data:
+                    id: "a1b2c3..."
+                    fullname: "John Doe"
+                    email: "john@example.com"
+                    roles: ["administrator", "user"]
+                code: 200
+                message: "OK - Request successful"
+                description: "User roles updated successfully."
+        400:
+          description: Invalid roles.
+        403:
+          description: Forbidden.
+        404:
+          description: User not found.
+
+  /user/deleted/all:
+    get:
+      summary: Get all soft deleted users (Recycle Bin)
+      tags: [User Management]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+          required: false
+          example: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+          required: false
+          example: 10
+      responses:
+        200:
+          description: Deleted users retrieved successfully
+          content:
+            application/json:
+              example:
+                result:
+                  users:
+                    - id: "22f7cb9a-b15a-4ff0-af56-c1c8fae4d81e"
+                      fullname: "Example User"
+                      email: "example@example.com"
+                      is_deleted: true
+                      deleted_at: "2025-01-12T10:30:00.000Z"
+                  meta:
+                    page: 1
+                    limit: 10
+                    totalData: 1
+                    totalPages: 1
+                    hasNextPage: false
+                    hasPrevPage: false
+                code: 200
+                message: "OK - Request successful"
+                description: "deleted users retrieved successfully"
+        403:
+          description: Forbidden
+          content:
+            application/json:
+              example:
+                result: null
+                code: 403
+                message: "Forbidden - You do not have permission"
+  
+  /user/restore/{id}:
+    put:
+      summary: Restore a soft-deleted user
+      tags: [User Management]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: UUID of the user to restore
+      responses:
+        200:
+          description: User restored successfully
+          content:
+            application/json:
+              example:
+                result:
+                  data:
+                    id: "4e7d6f7c-7342-4ef9-a87b-17d9b316b85c"
+                    fullname: "John Doe"
+                    email: "john@example.com"
+                    is_verified: true
+                  code: 200
+                  message: "OK - Request successful"
+                  description: "user restored successfully"
+        403:
+          description: Forbidden - insufficient permissions
+          content:
+            application/json:
+              example:
+                result: null
+                code: 403
+                message: "Forbidden - You do not have permission to restore users"
+        409:
+          description: User already active
+          content:
+            application/json:
+              example:
+                result: null
+                code: 409
+                message: "Conflict - User is already active"
+        404:
+          description: User not found
+          content:
+            application/json:
+              example:
+                result: null
+                code: 404
+                message: "Not Found - User not found"
+
+  /user/edit/{id}:
+    put:
+      summary: Update user profile
+      tags: [User Management]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                fullname:
+                  type: string
+                  example: "Jane Updated"
+                phone:
+                  type: string
+                  example: "08123456789"
+                password:
+                  type: string
+                  example: "NewPassword123"
+      responses:
+        200:
+          description: User updated successfully.
+          content:
+            application/json:
+              example:
+                result:
+                  data:
+                    id: "b2c3d4..."
+                    fullname: "Jane Updated"
+                    email: "jane@example.com"
+                    roles: ["user"]
+                code: 200
+                message: "OK - Request successful"
+                description: "User updated successfully."
+        403:
+          description: Cannot change own roles.
+        404:
+          description: User not found.
+
+  /user/remove/{id}:
+    delete:
+      summary: Delete a user by ID (Admin & Superadmin ONLY)
+      tags: [User Management]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        200:
+          description: User deleted successfully.
+          content:
+            application/json:
+              example:
+                result:
+                  data: null
+                code: 200
+                message: "OK - Request successful"
+                description: "User deleted successfully."
+        403:
+          description: Cannot delete yourself or cannot delete superadmin.
+        404:
+          description: User not found.
+
+  /user/delete:
+    delete:
+      summary: Delete multiple users at once (Admin & Superadmin ONLY)
+      tags: [User Management]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ids]
+              properties:
+                ids:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+                  example:
+                    - "b2c3d4e5-f6a7-8901-b2c3-d4e5f6a7b8c9"
+                    - "c3d4e5f6-a7b8-9012-c3d4-e5f6a7b8c9d0"
+      responses:
+        200:
+          description: Bulk delete completed.
+          content:
+            application/json:
+              example:
+                result:
+                  data:
+                    deleted: 2
+                    skipped:
+                      - "a1b2-superadmin-uuid"
+                code: 200
+                message: "OK - Request successful"
+                description: "Bulk delete completed."
+        400:
+          description: Invalid request body.
+        403:
+          description: Cannot delete one or more users.

@@ -1,0 +1,248 @@
+tags:
+  - name: Role Management
+    description: Manage user roles (Superadmin & Administrator only)
+
+paths:
+
+  /role/show/all:
+    get:
+      summary: Get all roles
+      tags: [Role Management]
+      security:
+        - bearerAuth: []
+      responses:
+        200:
+          description: Roles retrieved successfully
+          content:
+            application/json:
+              example:
+                result:
+                  data:
+                    - id: "6fa459ea-ee8a-3ca4-894e-db77e160355e"
+                      name: "superadmin"
+                      description: "Full system privileges"
+                      is_system: true
+                    - id: "91c57bb0-5d1e-4d8d-8944-1c7f6842ab05"
+                      name: "administrator"
+                      description: "Manage users"
+                      is_system: true
+                code: 200
+                message: "OK - Request successful"
+                description: "Roles retrieved successfully."
+
+  /role/show/{id}:
+    get:
+      summary: Get role by ID
+      tags: [Role Management]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Role UUID
+      responses:
+        200:
+          description: Role retrieved successfully
+          content:
+            application/json:
+              example:
+                result:
+                  data:
+                    id: "6fa459ea-ee8a-3ca4-894e-db77e160355e"
+                    name: "administrator"
+                    description: "Manage users"
+                    is_system: true
+                code: 200
+                message: "OK - Request successful"
+                description: "Role retrieved successfully."
+        404:
+          description: Role not found
+          content:
+            application/json:
+              example:
+                result: null
+                code: 404
+                message: "Not Found - Resource not found"
+
+  /role/create:
+    post:
+      summary: Create a new role
+      tags: [Role Management]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                  example: "driver"
+                description:
+                  type: string
+                  example: "Delivery driver role"
+                is_system:
+                  type: boolean
+                  example: false
+      responses:
+        201:
+          description: Role created successfully
+          content:
+            application/json:
+              example:
+                result:
+                  data:
+                    id: "2c8b6cf2-e033-4d6b-a993-6f8432a1fede"
+                    name: "driver"
+                    description: "Delivery driver role"
+                    is_system: false
+                code: 201
+                message: "Created - Resource created successfully"
+                description: "Role created successfully."
+        400:
+          description: Missing required fields
+          content:
+            application/json:
+              example:
+                result: null
+                code: 400
+                message: "Invalid Body - Missing required field"
+
+  /role/edit/{id}:
+    put:
+      summary: Update existing role
+      tags: [Role Management]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                  example: "support_level_2"
+                description:
+                  type: string
+                  example: "Customer support team L2"
+      responses:
+        200:
+          description: Role updated successfully
+          content:
+            application/json:
+              example:
+                result:
+                  data:
+                    id: "2c8b6cf2-e033-4d6b-a993-6f8432a1fede"
+                    name: "support_level_2"
+                    description: "Customer support team L2"
+                    is_system: false
+                code: 200
+                message: "OK - Request successful"
+                description: "Role updated successfully."
+        403:
+          description: Cannot edit system role
+          content:
+            application/json:
+              example:
+                result: null
+                code: 403
+                message: "Forbidden - Cannot edit system role"
+        404:
+          description: Role not found
+
+  /role/remove/{id}:
+    delete:
+      summary: Delete a role by ID
+      tags: [Role Management]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        200:
+          description: Role deleted successfully
+          content:
+            application/json:
+              example:
+                result:
+                  data: null
+                code: 200
+                message: "OK - Request successful"
+                description: "Role deleted successfully."
+        403:
+          description: Cannot delete system role
+          content:
+            application/json:
+              example:
+                result: null
+                code: 403
+                message: "Forbidden - Cannot delete system role"
+        409:
+          description: Role is assigned to users
+          content:
+            application/json:
+              example:
+                result: null
+                code: 409
+                message: "Conflict - Role is assigned to users"
+
+  /role/remove:
+    delete:
+      summary: Bulk delete roles
+      tags: [Role Management]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [roleIds]
+              properties:
+                roleIds:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+                  example:
+                    - "2c8b6cf2-e033-4d6b-a993-6f8432a1fede"
+                    - "91c57bb0-5d1e-4d8d-8944-1c7f6842ab05"
+      responses:
+        200:
+          description: Bulk roles deleted successfully
+          content:
+            application/json:
+              example:
+                result:
+                  data: null
+                code: 200
+                message: "OK - Request successful"
+                description: "Bulk roles deleted successfully."
+        403:
+          description: Cannot delete system role
+        409:
+          description: One or more roles are assigned to users
