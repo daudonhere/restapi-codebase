@@ -6,6 +6,11 @@ import { ResponsError } from "../../../constants/respons-error";
 import { ResponsSuccess } from "../../../constants/respons-success";
 import { AuthenticatedRequest } from "../../../middlewares/authenticate";
 import { sanitizeLogin, sanitizeUser } from "../../../utils/sanitize";
+import { toMs } from "../../auth/controllers/token-manage";
+
+const REFRESH_TOKEN_EXPIRES_IN = process.env.REFRESH_TOKEN_EXPIRES_IN || "7d";
+
+
 
 export const sendVerificationCodeController = async (
   req: Request,
@@ -43,13 +48,26 @@ export const confirmVerificationCodeController = async (
 
     const context = req.activityContext;
     if (!context) throw new Error("activity context missing");
+
     const data = await confirmVerificationCodeService(context, email, code);
-    const sanitizedUser = sanitizeLogin(data.user);
-    
+
+    const { accessToken, refreshToken, user } = data;
+
+    const sanitizedUser = sanitizeLogin(user);
+
+    res.cookie("refreshToken", refreshToken, {
+      httpOnly: true,
+      secure: true,
+      sameSite: "strict",
+      path: "/v1/auth/refresh",
+      maxAge: toMs(REFRESH_TOKEN_EXPIRES_IN),
+    });
+
     return ResponsSuccess(res, Code.OK, "email verified successfully", {
-      ...data,
+      accessToken,
       user: sanitizedUser,
     });
+
   } catch (err) {
     next(err);
   }

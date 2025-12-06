@@ -4,12 +4,15 @@ import { sanitizeLogin } from "../../../utils/sanitize";
 import { ResponsSuccess } from "../../../constants/respons-success";
 import { ResponsError } from "../../../constants/respons-error";
 import { Code } from "../../../constants/message-code";
+import { toMs } from "../controllers/token-manage";
+
+const REFRESH_TOKEN_EXPIRES_IN = process.env.REFRESH_TOKEN_EXPIRES_IN || "7d";
 
 export const loginController = async (
   req: Request,
   res: Response,
   next: NextFunction
-): Promise<Response | void> => {
+) => {
   try {
     const { email, password } = req.body;
     if (!email || !password) {
@@ -19,14 +22,25 @@ export const loginController = async (
     const context = req.activityContext;
     if (!context) throw new Error("activity context missing");
 
-    const data = await loginUserService(context, email, password)
+    const data = await loginUserService(context, email, password);
 
-    const sanitizedUser = sanitizeLogin(data.user);
+    const { accessToken, refreshToken, user } = data;
+
+    const sanitizedUser = sanitizeLogin(user);
+
+    res.cookie("refreshToken", refreshToken, {
+      httpOnly: true,
+      secure: true,
+      sameSite: "strict",
+      path: "/v1/auth/refresh",
+      maxAge: toMs(REFRESH_TOKEN_EXPIRES_IN),
+    });
 
     return ResponsSuccess(res, Code.OK, "login successful", {
-      ...data,
+      accessToken,
       user: sanitizedUser,
     });
+
   } catch (err) {
     next(err);
   }
