@@ -24,6 +24,6 @@ router.delete("/delete", authorizeRoles("superadmin", "administrator"), deleteBu
 router.put("/edit/:id", updateUserByIdController);
 router.delete("/remove/:id", authorizeRoles("superadmin", "administrator"), deleteUserByIdController);
 router.get("/show/:id", findUserByIdController);
-router.patch("/avatar/:id", upload.single("avatar"), uploadAvatarController);
+router.patch("/avatar", upload.single("avatar"), uploadAvatarController);
 
 export default router;

@@ -5,6 +5,7 @@ import { findUserByIdModel } from "../models/user-read";
 import { updateUserByIdModel, updateLastLoginModel, updateUserRolesModel } from "../models/user-update";
 import { withActivityLog } from "../../activity/controllers/activity-wrapper";
 import bcrypt from "bcrypt";
+import sharp from "sharp";
 import { supabase, SUPABASE_BUCKET } from "../../../configs/supabase";
 import { updateUserAvatarModel } from "../models/user-update";
 
@@ -13,35 +14,50 @@ export const uploadAvatarService = withActivityLog(
   { module: "user", action: "upload avatar" },
 
   async (context, userId: string, file: Express.Multer.File) => {
-    if (!file) {
-      throw new ResponsError(Code.BAD_REQUEST, "file is required");
+    if (!file) throw new ResponsError(Code.BAD_REQUEST, "file is required");
+
+    if (!["image/png", "image/jpeg", "image/jpg", "image/webp"].includes(file.mimetype)) {
+      throw new ResponsError(Code.BAD_REQUEST, "invalid file type");
     }
 
-    const ext = file.originalname.split(".").pop();
-    const filePath = `avatar-${userId}-${Date.now()}.${ext}`;
+    const processed = await sharp(file.buffer)
+      .resize(512, 512, { fit: "cover" })
+      .webp({ quality: 80 })
+      .toBuffer();
 
-    const { error } = await supabase.storage
+    const filename = `avatar-${userId}-${Date.now()}.webp`;
+
+    const user = await findUserByIdModel(userId);
+    if (!user) throw new ResponsError(Code.NOT_FOUND, "user not found");
+
+    if (user.avatar) {
+      const oldPath = user.avatar.split(`${SUPABASE_BUCKET}/`)[1];
+      if (oldPath) {
+        await supabase.storage.from(SUPABASE_BUCKET).remove([oldPath]);
+      }
+    }
+
+    const { error: uploadError } = await supabase.storage
       .from(SUPABASE_BUCKET)
-      .upload(filePath, file.buffer, {
-        contentType: file.mimetype,
-        upsert: true
+      .upload(filename, processed, {
+        contentType: "image/webp",
+        upsert: true,
       });
 
-    if (error) {
-      throw new ResponsError(Code.INTERNAL_SERVER_ERROR, "failed to upload file");
+    if (uploadError) {
+      throw new ResponsError(Code.INTERNAL_SERVER_ERROR, "failed to upload avatar");
     }
 
-    const publicUrl = `${process.env.SUPABASE_URL}/storage/v1/object/public/${SUPABASE_BUCKET}/${filePath}`;
-
+    const publicUrl = `${process.env.SUPABASE_URL}/storage/v1/object/public/${SUPABASE_BUCKET}/${filename}`;
     const updated = await updateUserAvatarModel(userId, publicUrl);
 
     return {
       userId,
       statusCode: Code.OK,
-      beforeData: null,
+      beforeData: { oldAvatar: user.avatar },
       afterData: updated,
       result: { avatar: publicUrl },
-      description: "avatar updated"
+      description: "avatar updated successfully",
     };
   }
 );

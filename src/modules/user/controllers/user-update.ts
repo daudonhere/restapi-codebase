@@ -14,17 +14,13 @@ export const uploadAvatarController = async (
   next: NextFunction
 ) => {
   try {
-    const { id } = req.params;
-    const actorPayload = req.user!;
-    
-    const actor = await findUserByIdService(actorPayload.id);
-    if (!actor) throw new ResponsError(Code.UNAUTHORIZED, "action requires valid user");
-
+    const actor = req.user!;
     const context = req.activityContext;
-    if (!context) throw new Error("activity context missing");
     const file = req.file;
 
-    const data = await uploadAvatarService(context, id, file);
+    if (!context) throw new Error("activity context missing");
+
+    const data = await uploadAvatarService(context, actor.id, file);
 
     return ResponsSuccess(res, Code.OK, "avatar updated", data.result);
   } catch (err) {
