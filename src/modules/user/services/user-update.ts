@@ -5,6 +5,46 @@ import { findUserByIdModel } from "../models/user-read";
 import { updateUserByIdModel, updateLastLoginModel, updateUserRolesModel } from "../models/user-update";
 import { withActivityLog } from "../../activity/controllers/activity-wrapper";
 import bcrypt from "bcrypt";
+import { supabase, SUPABASE_BUCKET } from "../../../configs/supabase";
+import { updateUserAvatarModel } from "../models/user-update";
+
+
+export const uploadAvatarService = withActivityLog(
+  { module: "user", action: "upload avatar" },
+
+  async (context, userId: string, file: Express.Multer.File) => {
+    if (!file) {
+      throw new ResponsError(Code.BAD_REQUEST, "file is required");
+    }
+
+    const ext = file.originalname.split(".").pop();
+    const filePath = `avatar-${userId}-${Date.now()}.${ext}`;
+
+    const { error } = await supabase.storage
+      .from(SUPABASE_BUCKET)
+      .upload(filePath, file.buffer, {
+        contentType: file.mimetype,
+        upsert: true
+      });
+
+    if (error) {
+      throw new ResponsError(Code.INTERNAL_SERVER_ERROR, "failed to upload file");
+    }
+
+    const publicUrl = `${process.env.SUPABASE_URL}/storage/v1/object/public/${SUPABASE_BUCKET}/${filePath}`;
+
+    const updated = await updateUserAvatarModel(userId, publicUrl);
+
+    return {
+      userId,
+      statusCode: Code.OK,
+      beforeData: null,
+      afterData: updated,
+      result: { avatar: publicUrl },
+      description: "avatar updated"
+    };
+  }
+);
 
 export const updateUserByIdService = withActivityLog(
   { module: "user", action: "update user" },

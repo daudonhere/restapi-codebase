@@ -89,6 +89,20 @@ export const updateLastLoginModel = async (userId: string): Promise<void> => {
   );
 };
 
+export const updateUserAvatarModel = async (userId: string, avatarUrl: string) => {
+  const res = await config.query(
+    `
+      UPDATE tb_user
+      SET avatar = $2, updated_at = NOW()
+      WHERE id = $1
+      RETURNING id, avatar;
+    `,
+    [userId, avatarUrl]
+  );
+
+  return res.rows[0];
+};
+
 export const updateUserRolesModel = async (id: string, roles: string[]): Promise<void> => {
     const client = await config.connect();
     try {
