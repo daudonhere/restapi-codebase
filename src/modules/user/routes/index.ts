@@ -1,13 +1,12 @@
 import express from "express";
 import { createUserController, sendVerificationCodeController, confirmVerificationCodeController, restoreUserByIdController } from "../controllers/user-create";
 import { findAllUsersController, findUserByEmailController, findUserByIdController } from "../controllers/user-read";
-import { updateUserByIdController, updateUserRolesController, uploadAvatarController } from "../controllers/user-update";
+import { updateUserByIdController, updateUserRolesController, uploadAvatarController, updateUserCredentialController } from "../controllers/user-update";
 import { deleteBulkUsersController, deleteUserByIdController, findDeletedUsersController } from "../controllers/user-delete";
 import { checkModuleEnabled } from "../../../middlewares/check-module";
 import { authenticateToken } from "../../../middlewares/authenticate";
 import { authorizeRoles } from "../../../middlewares/authorization";
 import { upload } from "../../../middlewares/multer-upload";
-import { updateUserCredentialController } from "../controllers/user-update";
 
 const router = express.Router();
 

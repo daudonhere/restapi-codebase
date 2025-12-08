@@ -35,6 +35,7 @@ export const updateUserCredentialModel = async (
         frequency = COALESCE($2, frequency),
         code      = COALESCE($3, code),
         password  = COALESCE($4, password),
+        is_verified = FALSE,
         updated_at = NOW()
       WHERE id = $5
       RETURNING id

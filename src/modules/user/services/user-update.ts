@@ -67,6 +67,7 @@ export const uploadAvatarService = withActivityLog(
 
 export const updateUserCredentialService = withActivityLog(
   { module: "user", action: "update credential" },
+
   async (context, id: string, data: any, actor: UserInterface) => {
 
     if (actor.id !== id) {
@@ -89,18 +90,33 @@ export const updateUserCredentialService = withActivityLog(
       data.frequency = await bcrypt.hash(data.frequency, 10);
 
     const updatedId = await updateUserCredentialModel(id, data);
-    const updated = await findUserByIdModel(updatedId);
+    const updatedUser = await findUserByIdModel(updatedId);
+
+    await deleteTokenByUserAndTypeModel(id, "verify");
+
+    const otp = generateVerificationCode();
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+    await saveTokenModel(id, otp, "verify", expiresAt);
+
+    sendVerificationEmail(updatedUser!.email, otp)
+      .catch(err => console.error("failed to send verification email:", err));
 
     return {
       userId: actor.id,
       statusCode: Code.OK,
       beforeData: "credential redacted",
-      afterData:  "credentials changed",
-      result: { id: updated!.id },
-      description: `user credentials updated`
+      afterData: "credentials updated, verification reset",
+      result: { 
+        id: updatedUser!.id,
+        email: updatedUser!.email,
+        is_verified: updatedUser!.is_verified
+      },
+      description: "credentials updated, verification email sent"
     };
   }
 );
+
 
 export const updateUserByIdService = withActivityLog(
   { module: "user", action: "update user" },
