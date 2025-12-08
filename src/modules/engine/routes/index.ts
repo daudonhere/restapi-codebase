@@ -8,7 +8,7 @@ const router = express.Router();
 
 router.use(authenticateToken);
 router.use(authorizeRoles("superadmin"));
-router.get("/show/all", getAllModulesController);
-router.put("/toggle/:name", toggleModuleController);
+router.get("/show", getAllModulesController);
+router.put("/status/:name", toggleModuleController);
 
 export default router;

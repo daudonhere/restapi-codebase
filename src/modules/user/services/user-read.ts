@@ -1,7 +1,7 @@
 import { ResponsError } from "../../../constants/respons-error";
 import { Code } from "../../../constants/message-code";
 import { UserInterface } from "../../../interfaces/user-interface";
-import { findAllUsersModel, findUserByIdModel, findUserByEmailModel, countAllUsersModel } from "../models/user-read";
+import { findAllUsersModel, findUserByIdModel, countAllUsersModel } from "../models/user-read";
 import { getPagination, buildMeta } from "../../../utils/pagination";
 
 export const findAllUsersService = async (page: number, limit: number) => {

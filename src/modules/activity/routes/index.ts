@@ -9,7 +9,7 @@ const router = express.Router();
 router.use(checkModuleEnabled("activity"));
 router.use(authenticateToken);
 router.use(authorizeRoles("superadmin", "administrator"));
-router.get("/show/all", getAllActivityLogController);
-router.get("/show/:id", getActivityLogByIdController);
+router.get("/show", getAllActivityLogController);
+router.get("/find/:id", getActivityLogByIdController);
 
 export default router;

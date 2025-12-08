@@ -11,8 +11,8 @@ const router = express.Router();
 
 router.use(checkModuleEnabled("role"));
 router.use(authenticateToken);
-router.get("/show/all", getAllRolesController);
-router.get("/show/:id", getRoleByIdController);
+router.get("/show", getAllRolesController);
+router.get("/find/:id", getRoleByIdController);
 router.post(
   "/create",
   authorizeRoles("superadmin", "administrator"),
@@ -29,7 +29,7 @@ router.delete(
   deleteRoleController
 );
 router.delete(
-  "/remove",
+  "/select",
   authorizeRoles("superadmin", "administrator"),
   deleteBulkRolesController
 );

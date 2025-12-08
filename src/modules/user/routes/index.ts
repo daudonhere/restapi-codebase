@@ -16,15 +16,15 @@ router.post("/verif/send", sendVerificationCodeController);
 router.post("/verif/confirm", confirmVerificationCodeController);
 
 router.use(authenticateToken);
-router.get("/deleted/all", authorizeRoles("superadmin", "administrator"), findDeletedUsersController);
+router.get("/deleted", authorizeRoles("superadmin", "administrator"), findDeletedUsersController);
 router.put("/restore/:id", authorizeRoles("superadmin", "administrator"), restoreUserByIdController);
-router.put("/roles/:id", authorizeRoles("superadmin", "administrator"), updateUserRolesController);
-router.delete("/select/delete", authorizeRoles("superadmin", "administrator"), deleteBulkUsersController);
-router.get("/find/all", authorizeRoles("superadmin", "administrator"), findAllUsersController);
+router.put("/role/:id", authorizeRoles("superadmin", "administrator"), updateUserRolesController);
+router.delete("/select", authorizeRoles("superadmin", "administrator"), deleteBulkUsersController);
+router.get("/show", authorizeRoles("superadmin", "administrator"), findAllUsersController);
 router.delete("/delete/:id", authorizeRoles("superadmin", "administrator"), deleteUserByIdController);
-router.put("/credential/self", updateUserCredentialController);
-router.patch("/avatar/self", upload.single("avatar"), uploadAvatarController);
-router.put("/edit/self", updateUserByIdController);
+router.put("/credential", updateUserCredentialController);
+router.patch("/avatar", upload.single("avatar"), uploadAvatarController);
+router.put("/change", updateUserByIdController);
 router.get("/find/:id", findUserByIdController);
 
 export default router;
