@@ -2,13 +2,12 @@ import { ResponsError } from "../../../constants/respons-error";
 import { Code } from "../../../constants/message-code";
 import { UserInterface } from "../../../interfaces/user-interface";
 import { findUserByIdModel } from "../models/user-read";
-import { updateUserByIdModel, updateLastLoginModel, updateUserRolesModel } from "../models/user-update";
+import { updateUserByIdModel, updateUserCredentialModel, updateLastLoginModel, updateUserRolesModel } from "../models/user-update";
 import { withActivityLog } from "../../activity/controllers/activity-wrapper";
 import bcrypt from "bcrypt";
 import sharp from "sharp";
 import { supabase, SUPABASE_BUCKET } from "../../../configs/supabase";
 import { updateUserAvatarModel } from "../models/user-update";
-
 
 export const uploadAvatarService = withActivityLog(
   { module: "user", action: "upload avatar" },
@@ -62,6 +61,43 @@ export const uploadAvatarService = withActivityLog(
   }
 );
 
+export const updateUserCredentialService = withActivityLog(
+  { module: "user", action: "update credential" },
+  async (context, id: string, data: any, actor: UserInterface) => {
+
+    if (actor.id !== id) {
+      throw new ResponsError(Code.FORBIDDEN, "cannot modify another user's credentials");
+    }
+
+    const beforeUser = await findUserByIdModel(id);
+    if (!beforeUser) throw new ResponsError(Code.NOT_FOUND, "user not found");
+
+    if (data.password)
+      data.password = await bcrypt.hash(data.password, 10);
+
+    if (data.pin)
+      data.pin = await bcrypt.hash(data.pin, 10);
+
+    if (data.code)
+      data.code = await bcrypt.hash(data.code, 10);
+
+    if (data.frequency)
+      data.frequency = await bcrypt.hash(data.frequency, 10);
+
+    const updatedId = await updateUserCredentialModel(id, data);
+    const updated = await findUserByIdModel(updatedId);
+
+    return {
+      userId: actor.id,
+      statusCode: Code.OK,
+      beforeData: "credential redacted",
+      afterData:  "credentials changed",
+      result: { id: updated!.id },
+      description: `user credentials updated`
+    };
+  }
+);
+
 export const updateUserByIdService = withActivityLog(
   { module: "user", action: "update user" },
   async (context, id: string, data: any, actor: UserInterface) => {
@@ -70,9 +106,6 @@ export const updateUserByIdService = withActivityLog(
 
     if (actor.id === id && data.roles && !actor.roles.includes("superadmin"))
       throw new ResponsError(Code.FORBIDDEN, "cannot modify own roles");
-
-    if (data.password)
-      data.password = await bcrypt.hash(data.password, 10);
 
     const beforeData = {
       id: beforeUser.id,

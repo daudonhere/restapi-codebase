@@ -2,78 +2,53 @@ import { config } from "../../../configs";
 import { Code } from "../../../constants/message-code";
 import { ResponsError } from "../../../constants/respons-error";
 
-export const updateUserByIdModel = async (
+export const updateUserAvatarModel = async (id: string, avatarUrl: string) => {
+  const res = await config.query(
+    `
+      UPDATE tb_user
+      SET avatar = $1,
+      updated_at = NOW()
+      WHERE id = $2
+      RETURNING avatar, id;
+    `,
+    [avatarUrl, id]
+  );
+
+  return res.rows[0];
+};
+
+export const updateUserCredentialModel = async (
   id: string,
   data: Record<string, any>
 ): Promise<string> => {
   const client = await config.connect();
   try {
     await client.query("BEGIN");
-    const {
-      fullname,
-      avatar,
-      phone,
-      pin,
-      frequency,
-      code,
-      passphrase,
-      source,
-      is_verified,
-      login_at,
-      password,
-      ip_address,
-      user_agent,
-      is_delete
-    } = data;
-    const deleted_at = is_delete ? new Date() : null;
+
+    const { pin, frequency, code, password } = data;
+
     const userResult = await client.query(
       `
       UPDATE tb_user
       SET 
-        fullname = COALESCE($1, fullname),
-        avatar = COALESCE($2, avatar),
-        phone = COALESCE($3, phone),
-        pin = COALESCE($4, pin),
-        frequency = COALESCE($5, frequency),
-        code = COALESCE($6, code),
-        passphrase = COALESCE($7, passphrase),
-        source = COALESCE($8, source),
-        is_verified = COALESCE($9, is_verified),
-        login_at = COALESCE($10, login_at),
-        password = COALESCE($11, password),
-        ip_address = COALESCE($12, ip_address),
-        user_agent = COALESCE($13, user_agent),
-        is_delete = COALESCE($14, is_delete),
-        deleted_at = COALESCE($15, deleted_at),
+        pin       = COALESCE($1, pin),
+        frequency = COALESCE($2, frequency),
+        code      = COALESCE($3, code),
+        password  = COALESCE($4, password),
         updated_at = NOW()
-      WHERE id = $16
+      WHERE id = $5
       RETURNING id
       `,
-      [
-        fullname,
-        avatar,
-        phone,
-        pin,
-        frequency,
-        code,
-        passphrase,
-        source,
-        is_verified,
-        login_at,
-        password,
-        ip_address,
-        user_agent,
-        is_delete,
-        deleted_at,
-        id
-      ]
+      [pin, frequency, code, password, id]
     );
 
     if (userResult.rowCount === 0) {
       throw new Error("User not found");
     }
+
     await client.query("COMMIT");
     return userResult.rows[0].id;
+
   } catch (e) {
     await client.query("ROLLBACK");
     throw e;
@@ -82,25 +57,51 @@ export const updateUserByIdModel = async (
   }
 };
 
-export const updateLastLoginModel = async (userId: string): Promise<void> => {
-  await config.query(
-    "UPDATE tb_user SET login_at = NOW(), updated_at = NOW() WHERE id = $1",
-    [userId]
-  );
+export const updateUserByIdModel = async (
+  id: string,
+  data: Record<string, any>
+): Promise<string> => {
+  const client = await config.connect();
+  try {
+    await client.query("BEGIN");
+
+    const { fullname, email, phone } = data;
+
+    const userResult = await client.query(
+      `
+      UPDATE tb_user
+      SET 
+        fullname = COALESCE($1, fullname),
+        email    = COALESCE($2, email),
+        phone    = COALESCE($3, phone),
+        updated_at = NOW()
+      WHERE id = $4
+      RETURNING id
+      `,
+      [fullname, email, phone, id]
+    );
+
+    if (userResult.rowCount === 0) {
+      throw new Error("User not found");
+    }
+
+    await client.query("COMMIT");
+    return userResult.rows[0].id;
+
+  } catch (e) {
+    await client.query("ROLLBACK");
+    throw e;
+  } finally {
+    client.release();
+  }
 };
 
-export const updateUserAvatarModel = async (userId: string, avatarUrl: string) => {
-  const res = await config.query(
-    `
-      UPDATE tb_user
-      SET avatar = $2, updated_at = NOW()
-      WHERE id = $1
-      RETURNING id, avatar;
-    `,
-    [userId, avatarUrl]
-  );
 
-  return res.rows[0];
+export const updateLastLoginModel = async (id: string): Promise<void> => {
+  await config.query(
+    "UPDATE tb_user SET login_at = NOW(), updated_at = NOW() WHERE id = $1",
+    [id]
+  );
 };
 
 export const updateUserRolesModel = async (id: string, roles: string[]): Promise<void> => {

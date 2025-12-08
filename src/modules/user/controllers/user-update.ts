@@ -7,6 +7,7 @@ import { ResponsSuccess } from "../../../constants/respons-success";
 import { AuthenticatedRequest } from "../../../middlewares/authenticate";
 import { sanitizeUser } from "../../../utils/sanitize";
 import { uploadAvatarService } from "../services/user-update";
+import { updateUserCredentialService } from "../services/user-update";
 
 export const uploadAvatarController = async (
   req: AuthenticatedRequest,
@@ -23,6 +24,29 @@ export const uploadAvatarController = async (
     const data = await uploadAvatarService(context, actor.id, file);
 
     return ResponsSuccess(res, Code.OK, "avatar updated", data.result);
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const updateUserCredentialController = async (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { id } = req.params;
+    const actorPayload = req.user!;
+    
+    const actor = await findUserByIdService(actorPayload.id);
+    if (!actor) throw new ResponsError(Code.UNAUTHORIZED, "action requires valid user");
+
+    const context = req.activityContext;
+    if (!context) throw new Error("activity context missing");
+
+    const updatedCredential = await updateUserCredentialService(context, id, req.body, actor);
+    
+    return ResponsSuccess(res, Code.OK, "credential updated successfully", updatedCredential);
   } catch (err) {
     next(err);
   }

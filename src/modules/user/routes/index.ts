@@ -7,6 +7,7 @@ import { checkModuleEnabled } from "../../../middlewares/check-module";
 import { authenticateToken } from "../../../middlewares/authenticate";
 import { authorizeRoles } from "../../../middlewares/authorization";
 import { upload } from "../../../middlewares/multer-upload";
+import { updateUserCredentialController } from "../controllers/user-update";
 
 const router = express.Router();
 
@@ -25,5 +26,6 @@ router.put("/edit/:id", updateUserByIdController);
 router.delete("/remove/:id", authorizeRoles("superadmin", "administrator"), deleteUserByIdController);
 router.get("/show/:id", findUserByIdController);
 router.patch("/avatar", upload.single("avatar"), uploadAvatarController);
+router.put("/credential/:id", updateUserCredentialController);
 
 export default router;
