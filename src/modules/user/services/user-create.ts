@@ -21,7 +21,7 @@ import {
 import { withActivityLog } from "../../activity/controllers/activity-wrapper";
 import { generatePhrase } from "../../../utils/phrase";
 
-const generateVerificationCode = (): string =>
+export const generateVerificationCode = (): string =>
   crypto.randomInt(100000, 999999).toString();
 
 export const sendVerificationCodeService = withActivityLog(

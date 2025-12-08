@@ -48,7 +48,6 @@ export const updateUserCredentialController = async (
   }
 };
 
-
 export const updateUserByIdController = async (
   req: AuthenticatedRequest,
   res: Response,
@@ -60,9 +59,29 @@ export const updateUserByIdController = async (
 
     if (!context) throw new Error("activity context missing");
 
-    const updatedUser = await updateUserByIdService(context, actor.id, req.body, actor);
-    
-    return ResponsSuccess(res, Code.OK, "users updated successfully", sanitizeUser(updatedUser));
+    const { fullname, phone, email, passphrase } = req.body;
+
+    if (!passphrase || typeof passphrase !== "string") {
+      throw new ResponsError(Code.BAD_REQUEST, "passphrase required");
+    }
+
+    const fields = { fullname, phone, email };
+
+    const data = await updateUserByIdService(
+      context,
+      actor.id,
+      fields,
+      actor,
+      passphrase.trim()
+    );
+
+    return ResponsSuccess(
+      res,
+      Code.OK,
+      "user updated successfully",
+      data 
+    );
+
   } catch (err) {
     next(err);
   }

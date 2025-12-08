@@ -44,6 +44,20 @@ export const findUserByEmailModel = async (
   return result.rows[0] || null;
 };
 
+export const findUserByPhoneModel = async (phone: string) => {
+  const result = await config.query(
+    `
+    SELECT *
+    FROM tb_user
+    WHERE phone = $1
+    LIMIT 1
+    `,
+    [phone]
+  );
+  return result.rows[0] || null;
+};
+
+
 export const findAllUsersModel = async (
   limit: number,
   offset: number

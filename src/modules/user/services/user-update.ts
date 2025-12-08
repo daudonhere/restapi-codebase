@@ -1,13 +1,17 @@
 import { ResponsError } from "../../../constants/respons-error";
 import { Code } from "../../../constants/message-code";
 import { UserInterface } from "../../../interfaces/user-interface";
-import { findUserByIdModel } from "../models/user-read";
+import { findUserByIdModel, findUserByEmailModel, findUserByPhoneModel} from "../models/user-read";
 import { updateUserByIdModel, updateUserCredentialModel, updateLastLoginModel, updateUserRolesModel } from "../models/user-update";
 import { withActivityLog } from "../../activity/controllers/activity-wrapper";
 import bcrypt from "bcrypt";
 import sharp from "sharp";
 import { supabase, SUPABASE_BUCKET } from "../../../configs/supabase";
 import { updateUserAvatarModel } from "../models/user-update";
+import { generateVerificationCode } from "./user-create";
+import { saveTokenModel } from "../../auth/models/token-create";
+import { deleteTokenByUserAndTypeModel } from "../../auth/models/token-delete";
+import { sendVerificationEmail, isEmailOnAllowList } from "../../../utils/email";
 
 export const uploadAvatarService = withActivityLog(
   { module: "user", action: "upload avatar" },
@@ -100,40 +104,89 @@ export const updateUserCredentialService = withActivityLog(
 
 export const updateUserByIdService = withActivityLog(
   { module: "user", action: "update user" },
-  async (context, id: string, data: any, actor: UserInterface) => {
-    const beforeUser = await findUserByIdModel(id);
-    if (!beforeUser) throw new ResponsError(Code.NOT_FOUND, "user not found");
 
-    if (actor.id === id && data.roles && !actor.roles.includes("superadmin"))
-      throw new ResponsError(Code.FORBIDDEN, "cannot modify own roles");
+  async (
+    context,
+    id: string,
+    fields: any,
+    actor: UserInterface,
+    passphrase: string
+  ) => {
 
-    const beforeData = {
-      id: beforeUser.id,
-      email: beforeUser.email,
-      fullname: beforeUser.fullname,
-      is_verified: beforeUser.is_verified
+    const user = await findUserByIdModel(id);
+    if (!user) throw new ResponsError(Code.NOT_FOUND, "user not found");
+
+    if (!passphrase || typeof passphrase !== "string") {
+      throw new ResponsError(Code.BAD_REQUEST, "valid passphrase required");
+    }
+
+    if (!user.passphrase) {
+      throw new ResponsError(Code.FORBIDDEN, "passphrase not set for this user");
+    }
+
+    const passphraseMatch = await bcrypt.compare(passphrase, user.passphrase);
+    if (!passphraseMatch) {
+      throw new ResponsError(Code.BAD_REQUEST, "invalid passphrase");
+    }
+
+    if (fields.email && !isEmailOnAllowList(fields.email)) {
+      throw new ResponsError(Code.BAD_REQUEST, "email provider not allowed");
+    }
+
+    let resetVerification = false;
+
+    if (fields.email && fields.email !== user.email) {
+      const existing = await findUserByEmailModel(fields.email);
+      if (existing) throw new ResponsError(Code.CONFLICT, "email already in use");
+      resetVerification = true;
+    }
+
+    if (fields.phone && fields.phone !== user.phone) {
+      const phoneOwner = await findUserByPhoneModel(fields.phone);
+      if (phoneOwner) throw new ResponsError(Code.CONFLICT, "phone already in use");
+    }
+
+    const payload = {
+      fullname: fields.fullname ?? null,
+      phone: fields.phone ?? null,
+      email: fields.email ?? null,
+      resetVerification
     };
 
-    const payload = { ...data };
-    delete payload.roles;
-    const updatedId = await updateUserByIdModel(id, payload);
-    const updated = await findUserByIdModel(updatedId);
-    const afterData = {
-      id: updated!.id,
-      email: updated!.email,
-      fullname: updated!.fullname,
-      is_verified: updated!.is_verified
+    const updated = await updateUserByIdModel(id, payload);
+
+    if (resetVerification) {
+      await deleteTokenByUserAndTypeModel(id, "verify");
+
+      const otp = generateVerificationCode();
+      const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+      await saveTokenModel(id, otp, "verify", expiresAt);
+
+      sendVerificationEmail(updated.email, otp).catch(() => {});
+    }
+
+    const cleanResult = {
+      id: updated.id,
+      fullname: updated.fullname,
+      email: updated.email,
+      phone: updated.phone,
+      is_verified: updated.is_verified
     };
+
     return {
       userId: actor.id,
       statusCode: Code.OK,
-      beforeData,
-      afterData,
-      result: updated,
-      description: `user ${id} updated`
+      beforeData: null,
+      afterData: null,
+      result: cleanResult,
+      description: resetVerification
+        ? "user updated, verification email sent"
+        : "user updated"
     };
   }
 );
+
 
 export const updateUserRolesService = withActivityLog(
   { module: "user", action: "update user roles" },

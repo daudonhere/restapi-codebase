@@ -60,12 +60,12 @@ export const updateUserCredentialModel = async (
 export const updateUserByIdModel = async (
   id: string,
   data: Record<string, any>
-): Promise<string> => {
+): Promise<any> => {
   const client = await config.connect();
   try {
     await client.query("BEGIN");
 
-    const { fullname, email, phone } = data;
+    const { fullname, email, phone, resetVerification } = data;
 
     const userResult = await client.query(
       `
@@ -74,11 +74,15 @@ export const updateUserByIdModel = async (
         fullname = COALESCE($1, fullname),
         email    = COALESCE($2, email),
         phone    = COALESCE($3, phone),
+        is_verified = CASE
+          WHEN $4 = TRUE THEN FALSE
+          ELSE is_verified
+        END,
         updated_at = NOW()
-      WHERE id = $4
-      RETURNING id
+      WHERE id = $5
+      RETURNING id, fullname, email, phone, is_verified;
       `,
-      [fullname, email, phone, id]
+      [fullname, email, phone, resetVerification, id]
     );
 
     if (userResult.rowCount === 0) {
@@ -86,7 +90,7 @@ export const updateUserByIdModel = async (
     }
 
     await client.query("COMMIT");
-    return userResult.rows[0].id;
+    return userResult.rows[0];
 
   } catch (e) {
     await client.query("ROLLBACK");
@@ -95,7 +99,6 @@ export const updateUserByIdModel = async (
     client.release();
   }
 };
-
 
 export const updateLastLoginModel = async (id: string): Promise<void> => {
   await config.query(
