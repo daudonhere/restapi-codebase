@@ -16,7 +16,3 @@ export const findUserByIdService = async (id: string): Promise<UserInterface> =>
   if (!user) throw new ResponsError(Code.NOT_FOUND, "user not found");
   return user;
 };
-
-export const findUserByEmailService = async (
-  email: string
-): Promise<UserInterface | null> => findUserByEmailModel(email);
