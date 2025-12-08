@@ -35,22 +35,19 @@ export const updateUserCredentialController = async (
   next: NextFunction
 ) => {
   try {
-    const { id } = req.params;
-    const actorPayload = req.user!;
-    
-    const actor = await findUserByIdService(actorPayload.id);
-    if (!actor) throw new ResponsError(Code.UNAUTHORIZED, "action requires valid user");
-
+    const actor = req.user!;
     const context = req.activityContext;
+
     if (!context) throw new Error("activity context missing");
 
-    const updatedCredential = await updateUserCredentialService(context, id, req.body, actor);
-    
-    return ResponsSuccess(res, Code.OK, "credential updated successfully", updatedCredential);
+    const updated = await updateUserCredentialService(context, actor.id, req.body, actor);
+
+    return ResponsSuccess(res, Code.OK, "credential updated successfully", updated);
   } catch (err) {
     next(err);
   }
 };
+
 
 export const updateUserByIdController = async (
   req: AuthenticatedRequest,
@@ -58,16 +55,12 @@ export const updateUserByIdController = async (
   next: NextFunction
 ) => {
   try {
-    const { id } = req.params;
-    const actorPayload = req.user!;
-    
-    const actor = await findUserByIdService(actorPayload.id);
-    if (!actor) throw new ResponsError(Code.UNAUTHORIZED, "action requires valid user");
-
+    const actor = req.user!;
     const context = req.activityContext;
+
     if (!context) throw new Error("activity context missing");
 
-    const updatedUser = await updateUserByIdService(context, id, req.body, actor);
+    const updatedUser = await updateUserByIdService(context, actor.id, req.body, actor);
     
     return ResponsSuccess(res, Code.OK, "users updated successfully", sanitizeUser(updatedUser));
   } catch (err) {

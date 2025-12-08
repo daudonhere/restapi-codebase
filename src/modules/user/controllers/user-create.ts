@@ -10,8 +10,6 @@ import { toMs } from "../../auth/controllers/token-manage";
 
 const REFRESH_TOKEN_EXPIRES_IN = process.env.REFRESH_TOKEN_EXPIRES_IN || "7d";
 
-
-
 export const sendVerificationCodeController = async (
   req: Request,
   res: Response,
@@ -28,7 +26,7 @@ export const sendVerificationCodeController = async (
     if (!context) throw new Error("activity context missing");
 
     const data = await sendVerificationCodeService(context, email);
-    return ResponsSuccess(res, Code.OK, data.emailSent ? "verification code sent" : "failed to send verification code", data);
+    return ResponsSuccess(res, Code.OK, data.emailSent ? "verification code sent" : "failed to send verification code ", data);
   } catch (err) {
     next(err);
   }
@@ -82,8 +80,12 @@ export const createUserController = async (
     const context = req.activityContext;
     if (!context) throw new Error("activity context missing");
 
-    const { user, emailSent, phrase } = await createUserService(context, req.body);
-    
+    const data = await createUserService(context, req.body);
+
+    const user = data.user;
+    const emailSent = data.emailSent;
+    const phrase = user.phrase;
+
     const description = emailSent
       ? "user created successfully and verification email sent"
       : "user created successfully";
@@ -92,13 +94,14 @@ export const createUserController = async (
       res, 
       Code.OK, 
       description,
-      { id: user.id,
+      { 
+        id: user.id,
         fullname: user.fullname,
         email: user.email,
         source: user.source,
         emailSent,
         phrase
-      },
+      }
     );
   } catch (err) {
     next(err);

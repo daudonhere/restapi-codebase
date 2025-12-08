@@ -114,6 +114,7 @@ export const createUserService = withActivityLog(
       throw new ResponsError(Code.BAD_REQUEST, "email provider not allowed");
 
     const existing = await findUserByEmailModel(email, true);
+    let createdPhrase: string | null = null;
     if (existing) {
       if (existing.is_delete) {
         throw new ResponsError(
@@ -131,9 +132,10 @@ export const createUserService = withActivityLog(
       throw new ResponsError(Code.CONFLICT, "email already registered");
     }
 
+    const hashedPassword = await bcrypt.hash(password, 10);
     const phrase = generatePhrase();
     const hashedPhrase = await bcrypt.hash(phrase, 10);
-    const hashedPassword = await bcrypt.hash(password, 10);
+    createdPhrase = phrase;
 
     const user = await createUserModel(
       email,
@@ -173,7 +175,7 @@ export const createUserService = withActivityLog(
       result: { 
         user: {
           ...user,
-          phrase
+          phrase: createdPhrase
         },
         emailSent: true,
       },

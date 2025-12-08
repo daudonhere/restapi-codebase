@@ -15,17 +15,18 @@ router.use(checkModuleEnabled("user"));
 router.post("/create", createUserController);
 router.post("/verif/send", sendVerificationCodeController);
 router.post("/verif/confirm", confirmVerificationCodeController);
+
 router.use(authenticateToken);
-router.get("/show/all", findAllUsersController);
-router.get("/email/:email", findUserByEmailController);
 router.get("/deleted/all", authorizeRoles("superadmin", "administrator"), findDeletedUsersController);
 router.put("/restore/:id", authorizeRoles("superadmin", "administrator"), restoreUserByIdController);
 router.put("/roles/:id", authorizeRoles("superadmin", "administrator"), updateUserRolesController);
 router.delete("/delete", authorizeRoles("superadmin", "administrator"), deleteBulkUsersController);
-router.put("/edit/:id", updateUserByIdController);
+router.get("/show/all", authorizeRoles("superadmin", "administrator"), findAllUsersController);
 router.delete("/remove/:id", authorizeRoles("superadmin", "administrator"), deleteUserByIdController);
-router.get("/show/:id", findUserByIdController);
+router.put("/credential", updateUserCredentialController);
 router.patch("/avatar", upload.single("avatar"), uploadAvatarController);
-router.put("/credential/:id", updateUserCredentialController);
+router.put("/edit", updateUserByIdController);
+router.get("/show/:id", findUserByIdController);
+router.get("/email/:email", findUserByEmailController);
 
 export default router;
