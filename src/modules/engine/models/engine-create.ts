@@ -9,7 +9,7 @@ export const createModuleModel = async (
     `
     INSERT INTO tb_engine (name, path, installed)
     VALUES ($1, $2, $3)
-    RETURNING *
+    RETURNING id, name, path, installed, created_at, updated_at
     `,
     [name, path, installed]
   );
