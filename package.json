@@ -1,14 +1,14 @@
 {
-  "name": "backend-espro",
+  "name": "restapi-codebase",
   "version": "1.0.0",
-  "description": "Espro backend using Express.js",
-  "homepage": "https://github.com/daudonhere/backend-espro#readme",
+  "description": "REST API codebase using Express.js",
+  "homepage": "https://github.com/daudonhere/restapi-codebase#readme",
   "bugs": {
-    "url": "https://github.com/daudonhere/backend-espro/issues"
+    "url": "https://github.com/daudonhere/restapi-codebase/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/daudonhere/backend-espro.git"
+    "url": "git+https://github.com/daudonhere/restapi-codebase.git"
   },
   "license": "ISC",
   "author": "daudonhere",
