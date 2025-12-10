@@ -5,9 +5,14 @@ import { Code } from "../../../constants/message-code";
 import { withActivityLog } from "../../activity/controllers/activity-wrapper";
 import { ActivityContextInterface } from "../../../interfaces/activity-interface";
 
+const isValidUUID = (value: string): boolean => {
+  return /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(value);
+};
+
 export const deleteRoleService = withActivityLog(
   { module: "role", action: "delete role" },
   async (context: ActivityContextInterface, id: string, actorId: string) => {
+    if (!isValidUUID(id)) throw new ResponsError(Code.NOT_FOUND, "role not valid");
     const role = await findRoleByIdModel(id);
     if (!role) throw new ResponsError(Code.NOT_FOUND, "role not found");
     if (role.is_system) throw new ResponsError(Code.FORBIDDEN, "cannot delete a system role");

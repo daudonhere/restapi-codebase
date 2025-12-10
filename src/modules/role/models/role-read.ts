@@ -8,9 +8,14 @@ export const countAllRolesModel = async (): Promise<number> => {
 
 export const countUsersInRoleModel = async (roleId: string): Promise<number> => {
   const result = await config.query<{ count: number }>(
-    `SELECT COUNT(*)::int AS count FROM tb_user_role WHERE role_id = $1`,
+    `
+    SELECT COUNT(*)::int AS count
+    FROM tb_user_role
+    WHERE role_id = $1
+    `,
     [roleId]
   );
+
   return result.rows[0]?.count ?? 0;
 };
 
@@ -20,13 +25,20 @@ export const findAllRolesModel = async (
 ): Promise<RoleInterface[]> => {
   const result = await config.query<RoleInterface>(
     `
-    SELECT *
+    SELECT
+      id,
+      name,
+      description,
+      is_system,
+      created_at,
+      updated_at
     FROM tb_role
     ORDER BY created_at DESC
     LIMIT $1 OFFSET $2
     `,
     [limit, offset]
   );
+
   return result.rows;
 };
 
@@ -34,19 +46,41 @@ export const findRoleByNameModel = async (
   name: string
 ): Promise<RoleInterface | null> => {
   const result = await config.query<RoleInterface>(
-    `SELECT * FROM tb_role WHERE LOWER(name) = LOWER($1) LIMIT 1`,
-    [name]
+    `
+    SELECT
+      id,
+      name,
+      description,
+      is_system,
+      created_at,
+      updated_at
+    FROM tb_role
+    WHERE LOWER(name) = LOWER($1)
+    LIMIT 1
+    `,
+    [name.trim()]
   );
+
   return result.rows[0] || null;
 };
-
 
 export const findRoleByIdModel = async (
   id: string
 ): Promise<RoleInterface | null> => {
   const result = await config.query<RoleInterface>(
-    `SELECT * FROM tb_role WHERE id = $1`,
+    `
+    SELECT
+      id,
+      name,
+      description,
+      is_system,
+      created_at,
+      updated_at
+    FROM tb_role
+    WHERE id = $1
+    `,
     [id]
   );
+
   return result.rows[0] || null;
 };

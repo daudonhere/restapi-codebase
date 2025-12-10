@@ -5,7 +5,7 @@ export const updateRoleModel = async (
   id: string,
   name: string,
   description: string | null
-): Promise<RoleInterface> => {
+): Promise<RoleInterface | null> => {
   const result = await config.query<RoleInterface>(
     `
     UPDATE tb_role
@@ -14,9 +14,16 @@ export const updateRoleModel = async (
       description = COALESCE($2, description),
       updated_at = NOW()
     WHERE id = $3
-    RETURNING *
+    RETURNING
+      id,
+      name,
+      description,
+      is_system,
+      created_at,
+      updated_at
     `,
-    [name, description, id]
+    [name.trim(), description, id]
   );
-  return result.rows[0];
+
+  return result.rows[0] ?? null;
 };

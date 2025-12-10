@@ -4,6 +4,10 @@ import { RoleInterface } from "../../../interfaces/role-interface";
 import { ResponsError } from "../../../constants/respons-error";
 import { Code } from "../../../constants/message-code";
 
+const isValidUUID = (value: string): boolean => {
+  return /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(value);
+};
+
 export const getAllRolesService = async (
   pageQuery?: string,
   limitQuery?: string
@@ -17,6 +21,7 @@ export const getAllRolesService = async (
 export const getRoleByIdService = async (
   id: string
 ): Promise<RoleInterface> => {
+  if (!isValidUUID(id)) throw new ResponsError(Code.NOT_FOUND, "role not valid");
   const role = await findRoleByIdModel(id);
   if (!role) throw new ResponsError(Code.NOT_FOUND, "role not found");
   return role;

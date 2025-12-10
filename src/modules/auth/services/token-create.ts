@@ -31,7 +31,7 @@ export const loginUserService = withActivityLog({module: "auth", action: "login"
 
     const isValid = await bcrypt.compare(password, user.password);
     if (!isValid) {
-      throw new ResponsError(Code.UNAUTHORIZED, "email or password is incorrect");
+      throw new ResponsError(Code.BAD_REQUEST, "email or password is incorrect");
     }
 
     await updateLastLoginModel(user.id);
