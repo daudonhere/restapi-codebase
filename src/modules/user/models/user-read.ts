@@ -2,68 +2,32 @@ import { config } from "../../../configs";
 import { QueryResult } from "pg";
 import { UserInterface } from "../../../interfaces/user-interface";
 
-export const findUserByIdModel = async (
-  id: string
-): Promise<Omit<UserInterface, "password" | "pin" | "passphrase" | "code"> | null> => {
+export const findUserByIdModel = async (id: string): Promise<UserInterface | null> => {
   const result: QueryResult = await config.query(
     `
     SELECT 
-      u.id,
-      u.fullname,
-      u.avatar,
-      u.email,
-      u.phone,
-      u.frequency,
-      u.source,
-      u.is_verified,
-      u.login_at,
-      u.ip_address,
-      u.user_agent,
-      u.is_delete,
-      u.deleted_at,
-      u.created_at,
-      u.updated_at,
-      COALESCE(
-        json_agg(r.name) FILTER (WHERE r.name IS NOT NULL),
-        '[]'
-      ) AS roles
+      u.*, 
+      COALESCE(json_agg(r.name) FILTER (WHERE r.name IS NOT NULL), '[]') AS roles
     FROM tb_user u
     LEFT JOIN tb_user_role ur ON u.id = ur.user_id
     LEFT JOIN tb_role r ON ur.role_id = r.id
-    WHERE u.id = $1 AND u.is_delete = FALSE
+    WHERE u.id = $1
+      AND u.is_delete = FALSE
     GROUP BY u.id
     `,
     [id]
   );
-
   return result.rows[0] || null;
 };
 
 export const findUserByEmailModel = async (
   email: string,
   includeDeleted = false
-): Promise<Omit<UserInterface, "password" | "pin" | "passphrase" | "code"> | null> => {
+): Promise<UserInterface | null> => {
   let query = `
     SELECT 
-      u.id,
-      u.fullname,
-      u.avatar,
-      u.email,
-      u.phone,
-      u.frequency,
-      u.source,
-      u.is_verified,
-      u.login_at,
-      u.ip_address,
-      u.user_agent,
-      u.is_delete,
-      u.deleted_at,
-      u.created_at,
-      u.updated_at,
-      COALESCE(
-        json_agg(r.name) FILTER (WHERE r.name IS NOT NULL),
-        '[]'
-      ) AS roles
+      u.*, 
+      COALESCE(json_agg(r.name) FILTER (WHERE r.name IS NOT NULL), '[]') AS roles
     FROM tb_user u
     LEFT JOIN tb_user_role ur ON u.id = ur.user_id
     LEFT JOIN tb_role r ON ur.role_id = r.id
@@ -80,61 +44,32 @@ export const findUserByEmailModel = async (
   return result.rows[0] || null;
 };
 
-export const findUserByPhoneModel = async (
-  phone: string
-): Promise<Omit<UserInterface, "password" | "pin" | "passphrase" | "code"> | null> => {
+export const findUserByPhoneModel = async (phone: string) => {
   const result = await config.query(
     `
-    SELECT 
-      id,
-      fullname,
-      avatar,
-      email,
-      phone,
-      frequency,
-      source,
-      is_verified,
-      login_at,
-      ip_address,
-      user_agent,
-      is_delete,
-      deleted_at,
-      created_at,
-      updated_at
+    SELECT *
     FROM tb_user
-    WHERE phone = $1 AND is_delete = FALSE
+    WHERE phone = $1
     LIMIT 1
     `,
     [phone]
   );
-
   return result.rows[0] || null;
 };
+
 
 export const findAllUsersModel = async (
   limit: number,
   offset: number
-): Promise<Omit<UserInterface, "password" | "pin" | "passphrase" | "code">[]> => {
+): Promise<Omit<UserInterface, "password">[]> => {
   const result = await config.query(
     `
     SELECT 
-      u.id,
-      u.fullname,
-      u.avatar,
-      u.email,
-      u.phone,
-      u.frequency,
-      u.source,
-      u.is_verified,
-      u.login_at,
-      u.ip_address,
-      u.user_agent,
-      u.created_at,
-      u.updated_at,
-      COALESCE(
-        json_agg(r.name) FILTER (WHERE r.name IS NOT NULL),
-        '[]'
-      ) AS roles
+      u.id, u.fullname, u.avatar, u.email, u.phone, u.frequency, u.code,
+      u.pin, u.passphrase, u.source, u.is_verified, u.login_at,
+      u.ip_address, u.user_agent,
+      u.created_at, u.updated_at,
+      COALESCE(json_agg(r.name) FILTER (WHERE r.name IS NOT NULL), '[]') AS roles
     FROM tb_user u
     LEFT JOIN tb_user_role ur ON u.id = ur.user_id
     LEFT JOIN tb_role r ON ur.role_id = r.id
@@ -145,7 +80,6 @@ export const findAllUsersModel = async (
     `,
     [limit, offset]
   );
-
   return result.rows;
 };
 
@@ -153,5 +87,5 @@ export const countAllUsersModel = async (): Promise<number> => {
   const result = await config.query(
     `SELECT COUNT(*)::int AS count FROM tb_user WHERE is_delete = FALSE`
   );
-  return result.rows[0]?.count ?? 0;
+  return result.rows[0].count;
 };
