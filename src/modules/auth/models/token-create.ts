@@ -11,6 +11,6 @@ export const saveTokenModel = async (
     INSERT INTO tb_token (user_id, token, type, expired_at)
     VALUES ($1, $2, $3, $4)
     `,
-    [userId, token, type, expiresAt]
+    [userId, token.trim(), type, expiresAt]
   );
 };

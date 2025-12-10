@@ -5,8 +5,20 @@ export const findTokenModel = async (
   type: "refresh" | "verify" | "reset"
 ) => {
   const result = await config.query(
-    "SELECT * FROM tb_token WHERE token = $1 AND type = $2",
-    [token, type]
+    `
+    SELECT 
+      id,
+      user_id,
+      token,
+      type,
+      created_at,
+      expired_at
+    FROM tb_token
+    WHERE token = $1 AND type = $2
+    LIMIT 1
+    `,
+    [token.trim(), type]
   );
+
   return result.rows[0] || null;
 };
