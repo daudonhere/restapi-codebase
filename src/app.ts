@@ -2,7 +2,6 @@ import express, { Express, Request, Response, NextFunction, ErrorRequestHandler 
 import dotenv from "dotenv";
 import cors from "cors";
 import swaggerUi from "swagger-ui-express";
-import { config } from "./configs";
 import { swaggerSpec } from "./configs/swagger";
 import { ResponsError } from "./constants/respons-error";
 import { ResponsSuccess } from "./constants/respons-success";
@@ -46,7 +45,6 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 
 const mapCodeToHttpStatus = (code: Code): number => {
   if (code >= 400 && code < 600) return code;
-
   switch (code) {
     case Code.UNAUTHORIZED:
       return Code.UNAUTHORIZED;
@@ -68,13 +66,8 @@ const globalErrorHandler: ErrorRequestHandler = (
   let errorResponse: ResponsError;
   if (err instanceof ResponsError) {
     errorResponse = err;
-  }
-  else {
-    console.error(`[ERROR] ${err.stack || err.message}`);
-    errorResponse = new ResponsError(
-      Code.INTERNAL_SERVER_ERROR,
-      err.message || "unexpected error occurred"
-    );
+  } else {
+    errorResponse = new ResponsError(Code.INTERNAL_SERVER_ERROR, err.message || "unexpected error occurred");
   }
 
   const httpStatus = mapCodeToHttpStatus(errorResponse.code);
@@ -85,13 +78,6 @@ app.use(globalErrorHandler);
 
 app.listen(PORT, () => {
   console.log(`services running at ${HOST}:${PORT}`);
-  config.connect((err) => {
-    if (err) {
-      console.error("failed to connect to PostgreSQL cause ", err.message);
-    } else {
-      console.log("connected to Postgre successfully");
-    }
-  });
 });
 
 export default app;
