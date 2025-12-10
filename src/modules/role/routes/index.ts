@@ -6,32 +6,20 @@ import { deleteRoleController, deleteBulkRolesController } from "../controllers/
 import { authorizeRoles } from "../../../middlewares/authorization";
 import { authenticateToken } from "../../../middlewares/authenticate";
 import { checkModuleEnabled } from "../../../middlewares/check-module";
+import { mainRateLimiter } from "../../../middlewares/rate-limit";
 
 const router = express.Router();
 
 router.use(checkModuleEnabled("role"));
+router.use(mainRateLimiter);
 router.use(authenticateToken);
+router.use(authorizeRoles("superadmin", "administrator"));
+
 router.get("/show", getAllRolesController);
 router.get("/find/:id", getRoleByIdController);
-router.post(
-  "/create",
-  authorizeRoles("superadmin", "administrator"),
-  createRoleController
-);
-router.put(
-  "/edit/:id",
-  authorizeRoles("superadmin", "administrator"),
-  updateRoleController
-);
-router.delete(
-  "/remove/:id",
-  authorizeRoles("superadmin", "administrator"),
-  deleteRoleController
-);
-router.delete(
-  "/select",
-  authorizeRoles("superadmin", "administrator"),
-  deleteBulkRolesController
-);
+router.post("/create", createRoleController);
+router.put("/edit/:id", updateRoleController);
+router.delete("/remove/:id", deleteRoleController);
+router.delete("/select", deleteBulkRolesController);
 
 export default router;

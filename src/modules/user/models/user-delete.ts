@@ -5,9 +5,10 @@ export const softDeleteUserModel = async (id: string): Promise<void> => {
   await config.query(
     `
     UPDATE tb_user
-    SET is_delete = TRUE,
-        deleted_at = NOW(),
-        updated_at = NOW()
+    SET 
+      is_delete = TRUE,
+      deleted_at = NOW(),
+      updated_at = NOW()
     WHERE id = $1
     `,
     [id]
@@ -21,10 +22,7 @@ export const findDeletedUsersModel = async (
   const result = await config.query(
     `
     SELECT 
-      u.id, u.fullname, u.avatar, u.email, u.phone, u.source,
-      u.is_verified, u.ip_address, u.user_agent,
-      u.is_delete, u.deleted_at,
-      u.login_at, u.created_at, u.updated_at,
+      u.*,
       COALESCE(json_agg(r.name) FILTER (WHERE r.name IS NOT NULL), '[]') AS roles
     FROM tb_user u
     LEFT JOIN tb_user_role ur ON u.id = ur.user_id
@@ -36,20 +34,33 @@ export const findDeletedUsersModel = async (
     `,
     [limit, offset]
   );
+
   return result.rows;
 };
 
 export const countDeletedUsersModel = async (): Promise<number> => {
   const result = await config.query(
-    `SELECT COUNT(*)::int AS count FROM tb_user WHERE is_delete = TRUE`
+    `
+    SELECT COUNT(*)::int AS count
+    FROM tb_user
+    WHERE is_delete = TRUE
+    `
   );
-  return result.rows[0].count;
+
+  return result.rows[0]?.count ?? 0;
 };
 
-export const hardDeleteUserModel = async (id: string): Promise<UserInterface | null> => {
+export const hardDeleteUserModel = async (
+  id: string
+): Promise<UserInterface | null> => {
   const result = await config.query(
-    "DELETE FROM tb_user WHERE id = $1 RETURNING *",
+    `
+    DELETE FROM tb_user
+    WHERE id = $1
+    RETURNING *
+    `,
     [id]
   );
+
   return result.rows[0] || null;
 };

@@ -8,6 +8,8 @@ import { ResponsError } from "./constants/respons-error";
 import { ResponsSuccess } from "./constants/respons-success";
 import { Code } from "./constants/message-code";
 import { activityContextMiddleware } from "./middlewares/activity-context";
+import { securityMiddleware } from "./middlewares/security";
+import { mainRateLimiter } from "./middlewares/rate-limit";
 import cookieParser from "cookie-parser";
 import routes from "./routes/v1";
 
@@ -20,12 +22,13 @@ const HOST = process.env.HOST;
 app.set("trust proxy", true);
 
 app.use(cors());
+app.use(securityMiddleware());
+app.use(mainRateLimiter);
 app.use(express.json());
 app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
 app.use(activityContextMiddleware);
 app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
-
 app.use("/v1", routes);
 
 app.get("/docs.json", (req, res) => {

@@ -7,16 +7,20 @@ import { googleCallbackController } from "../controllers/google-callback";
 import { githubAuthRedirectController } from "../controllers/github-redirect";
 import { githubCallbackController } from "../controllers/github-callback";
 import { checkModuleEnabled } from "../../../middlewares/check-module";
+import { authRateLimiter, oauthRateLimiter } from "../../../middlewares/rate-limit";
 
 const router = express.Router();
 
 router.use(checkModuleEnabled("auth"));
-router.post("/login", loginController);
-router.post("/refresh", refreshController);
-router.post("/logout", logoutController);
-router.get("/google", googleAuthRedirectController);
-router.get("/google/callback", googleCallbackController);
-router.get("/github", githubAuthRedirectController);
-router.get("/github/callback", githubCallbackController);
+
+router.post("/login", authRateLimiter, loginController);
+router.post("/refresh", authRateLimiter, refreshController);
+router.post("/logout", authRateLimiter, logoutController);
+
+router.get("/google", oauthRateLimiter, googleAuthRedirectController);
+router.get("/google/callback", oauthRateLimiter, googleCallbackController);
+
+router.get("/github", oauthRateLimiter, githubAuthRedirectController);
+router.get("/github/callback", oauthRateLimiter, githubCallbackController);
 
 export default router;
