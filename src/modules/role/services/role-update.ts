@@ -4,10 +4,7 @@ import { ActivityContextInterface } from "../../../interfaces/activity-interface
 import { ResponsError } from "../../../constants/respons-error";
 import { Code } from "../../../constants/message-code";
 import { withActivityLog } from "../../activity/controllers/activity-wrapper";
-
-const isValidUUID = (value: string): boolean => {
-  return /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(value);
-};
+import { isValidUUID } from "../../../utils/validation";
 
 export const updateRoleService = withActivityLog(
   { module: "role", action: "update role" },

@@ -3,10 +3,7 @@ import { buildMeta, getPagination } from "../../../utils/pagination";
 import { RoleInterface } from "../../../interfaces/role-interface";
 import { ResponsError } from "../../../constants/respons-error";
 import { Code } from "../../../constants/message-code";
-
-const isValidUUID = (value: string): boolean => {
-  return /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(value);
-};
+import { isValidUUID } from "../../../utils/validation";
 
 export const getAllRolesService = async (
   pageQuery?: string,

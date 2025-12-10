@@ -4,10 +4,7 @@ import { ResponsError } from "../../../constants/respons-error";
 import { Code } from "../../../constants/message-code";
 import { withActivityLog } from "../../activity/controllers/activity-wrapper";
 import { ActivityContextInterface } from "../../../interfaces/activity-interface";
-
-const isValidUUID = (value: string): boolean => {
-  return /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(value);
-};
+import { isValidUUID } from "../../../utils/validation";
 
 export const deleteRoleService = withActivityLog(
   { module: "role", action: "delete role" },
