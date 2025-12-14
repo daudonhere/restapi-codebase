@@ -2,7 +2,7 @@
   <img src="https://capsule-render.vercel.app/api?type=waving&color=0:2b8dfc,100:2b8dfc&height=200&section=header&animation=fadeIn" />
 </p>
 
-<h2 align="center">Modular Backend Rest API Using ExpressJS</h2>
+<h2 align="center">Modular Rest API Codebase Using ExpressJS</h2>
 
 <p align="center" style="width: 60%; max-width: 400px; margin: 0 auto;">
   A basic code structure that provides the foundation for building backend applications that implement Representational State Transfer architectural principles.
@@ -23,24 +23,8 @@ Here are the steps to install and run this project:
 
 2.  **Configure Environment Variables**
 
+    ```bash
     Rename a `.env.example` to `.env` file in the root directory of your project.
-    ```env
-    DATABASE_URL=your_database_url_here
-    JWT_SECRET=jsonwebtokensecretkey
-    JWT_EXPIRES_IN=15m
-    REFRESH_TOKEN_SECRET=refreshtokensecretkey
-    REFRESH_TOKEN_EXPIRES_IN=7d
-    PORT=4000
-    GOOGLE_CLIENT_ID=google-client-id-here
-    GOOGLE_CLIENT_SECRET=google-client-secret-here
-    GOOGLE_REDIRECT_URI=google-redirect-uri-here
-    GITHUB_CLIENT_ID=github-client-id-here
-    GITHUB_CLIENT_SECRET=github-client-secret-here
-    GITHUB_CALLBACK_URL=github-callback-url-here
-    SMTP_HOST="your-smtp-host"
-    SMTP_PORT=587
-    SMTP_USER="your-ethereal-user@ethereal.email"
-    SMTP_PASS="your-ethereal-password"
     ```
 
 3.  **Migrate Database**
