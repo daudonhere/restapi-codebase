@@ -14,15 +14,10 @@ export const loginController = async (
   next: NextFunction
 ) => {
   try {
-    const { email, password } = req.body;
-    if (!email || !password) {
-      throw new ResponsError(Code.BAD_REQUEST, "missing required fields");
-    }
-
     const context = req.activityContext;
     if (!context) throw new Error("activity context missing");
 
-    const data = await loginUserService(context, email, password);
+    const data = await loginUserService(context, req.body);
 
     const { accessToken, refreshToken, user } = data;
 

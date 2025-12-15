@@ -1,8 +1,12 @@
 import { Request, Response, NextFunction } from "express";
-import { createUserService, sendVerificationCodeService, confirmVerificationCodeService, restoreUserByIdService } from "../services/user-create";
+import {
+  createUserService,
+  sendVerificationCodeService,
+  confirmVerificationCodeService,
+  restoreUserByIdService,
+} from "../services/user-create";
 import { findUserByIdService } from "../services/user-read";
 import { Code } from "../../../constants/message-code";
-import { ResponsError } from "../../../constants/respons-error";
 import { ResponsSuccess } from "../../../constants/respons-success";
 import { AuthenticatedRequest } from "../../../middlewares/authenticate";
 import { sanitizeLogin, sanitizeUser } from "../../../utils/sanitize";
@@ -16,17 +20,9 @@ export const sendVerificationCodeController = async (
   next: NextFunction
 ) => {
   try {
-    const { email } = req.body;
-
-    if (!email) {
-      throw new ResponsError(Code.BAD_REQUEST, "email is required");
-    }
-
-    const context = req.activityContext; 
-    if (!context) throw new Error("activity context missing");
-
-    const data = await sendVerificationCodeService(context, email);
-    return ResponsSuccess(res, Code.OK, data.emailSent ? "verification code sent" : "failed to send verification code ", data);
+    const context = req.activityContext!;
+    const data = await sendVerificationCodeService(context, req.body);
+    return ResponsSuccess(res, Code.OK, "verification code sent", data);
   } catch (err) {
     next(err);
   }
@@ -38,20 +34,10 @@ export const confirmVerificationCodeController = async (
   next: NextFunction
 ) => {
   try {
-    const { email, code } = req.body;
-
-    if (!email || !code) {
-      throw new ResponsError(Code.BAD_REQUEST, "email and code are required");
-    }
-
-    const context = req.activityContext;
-    if (!context) throw new Error("activity context missing");
-
-    const data = await confirmVerificationCodeService(context, email, code);
+    const context = req.activityContext!;
+    const data = await confirmVerificationCodeService(context, req.body);
 
     const { accessToken, refreshToken, user } = data;
-
-    const sanitizedUser = sanitizeLogin(user);
 
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
@@ -63,9 +49,8 @@ export const confirmVerificationCodeController = async (
 
     return ResponsSuccess(res, Code.OK, "email verified successfully", {
       accessToken,
-      user: sanitizedUser,
+      user: sanitizeLogin(user),
     });
-
   } catch (err) {
     next(err);
   }
@@ -77,32 +62,17 @@ export const createUserController = async (
   next: NextFunction
 ) => {
   try {
-    const context = req.activityContext;
-    if (!context) throw new Error("activity context missing");
-
+    const context = req.activityContext!;
     const data = await createUserService(context, req.body);
 
-    const user = data.user;
-    const emailSent = data.emailSent;
-    const phrase = user.phrase;
-
-    const description = emailSent
-      ? "user created successfully and verification email sent"
-      : "user created successfully";
-
-    return ResponsSuccess(
-      res, 
-      Code.OK, 
-      description,
-      { 
-        id: user.id,
-        fullname: user.fullname,
-        email: user.email,
-        source: user.source,
-        emailSent,
-        phrase
-      }
-    );
+    return ResponsSuccess(res, Code.CREATED, "user created successfully", {
+      id: data.user.id,
+      fullname: data.user.fullname,
+      email: data.user.email,
+      source: data.user.source,
+      emailSent: data.emailSent,
+      phrase: data.user.phrase,
+    });
   } catch (err) {
     next(err);
   }
@@ -114,15 +84,9 @@ export const restoreUserByIdController = async (
   next: NextFunction
 ) => {
   try {
-    const { id } = req.params;
-    const actorPayload = req.user!;
-    const actor = await findUserByIdService(actorPayload.id);
-    
-    if(!actor) throw new ResponsError(Code.UNAUTHORIZED, "actor not found");
-
-    const context = req.activityContext;
-    if (!context) throw new Error("activity context missing");
-    const restored = await restoreUserByIdService(context, id, actor);
+    const actor = await findUserByIdService(req.user!.id);
+    const context = req.activityContext!;
+    const restored = await restoreUserByIdService(context, req.params.id, actor);
     return ResponsSuccess(res, Code.OK, "user restored successfully", sanitizeUser(restored));
   } catch (err) {
     next(err);

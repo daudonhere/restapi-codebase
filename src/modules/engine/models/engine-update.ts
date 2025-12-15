@@ -1,10 +1,16 @@
 import { config } from "../../../configs";
+import {
+  EngineModule,
+  UpdateEngineStatusSchema,
+} from "../schema/engine-schema";
 
 export const updateModuleStatusModel = async (
-  id: string,
-  installed: boolean
-) => {
-  const result = await config.query(
+  input: unknown
+): Promise<EngineModule | null> => {
+  const { id, installed } =
+    UpdateEngineStatusSchema.parse(input);
+
+  const result = await config.query<EngineModule>(
     `
     UPDATE tb_engine
     SET installed = $1,
@@ -14,5 +20,6 @@ export const updateModuleStatusModel = async (
     `,
     [installed, id]
   );
-  return result.rows[0] || null;
+
+  return result.rows[0] ?? null;
 };

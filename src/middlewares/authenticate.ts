@@ -1,14 +1,14 @@
 import { Request, Response, NextFunction } from "express";
 import jwt, { JwtPayload, TokenExpiredError } from "jsonwebtoken";
 import dotenv from "dotenv";
-import { PayloadInterface } from "../interfaces/payload-interface";
 import { ResponsError } from "../constants/respons-error";
 import { Code } from "../constants/message-code";
+import { Payload, PayloadSchema } from "../modules/auth/schema/auth-schema";
 
 dotenv.config();
 
 export interface AuthenticatedRequest extends Request {
-  user?: PayloadInterface;
+  user?: Payload;
 }
 
 export const authenticateToken = (
@@ -32,15 +32,8 @@ export const authenticateToken = (
 
     const decoded = jwt.verify(token, secret) as JwtPayload;
 
-    if (!decoded || !decoded.id || !decoded.email || !decoded.roles) {
-      throw new ResponsError(Code.UNAUTHORIZED, "malformed token payload");
-    }
-
-    req.user = {
-      id: decoded.id,
-      email: decoded.email,
-      roles: decoded.roles,
-    };
+    // Validate the payload structure using Zod schema
+    req.user = PayloadSchema.parse(decoded);
 
     next();
 
@@ -49,7 +42,8 @@ export const authenticateToken = (
       throw new ResponsError(Code.UNAUTHORIZED, "token has expired");
     }
     if (err instanceof Error) {
-      throw new ResponsError(Code.UNAUTHORIZED, err.message);
+      // Catch Zod validation errors as well
+      throw new ResponsError(Code.UNAUTHORIZED, `token verification failed: ${err.message}`);
     }
     throw new ResponsError(Code.UNAUTHORIZED, "token verification failed");
   }

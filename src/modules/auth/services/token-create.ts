@@ -1,16 +1,27 @@
 import bcrypt from "bcrypt";
+import { LoginSchema } from "../schema/auth-schema";
 import { ResponsError } from "../../../constants/respons-error";
 import { Code } from "../../../constants/message-code";
 import { findUserByEmailModel } from "../../user/models/user-read";
 import { updateLastLoginModel } from "../../user/models/user-update";
-import { generateAccessToken, generateRefreshToken, getRefreshExpiresAt, saveRefreshToken, toMs } from "../controllers/token-manage";
+import {
+  generateAccessToken,
+  generateRefreshToken,
+  getRefreshExpiresAt,
+  saveRefreshToken,
+  toMs,
+} from "../controllers/token-manage";
 import { withActivityLog } from "../../activity/controllers/activity-wrapper";
 
-export const loginUserService = withActivityLog({module: "auth", action: "login",},
-  async (context, email: string, password: string) => {
-    const beforeData = { email };
-    const user = await findUserByEmailModel(email, true);
+export const loginUserService = withActivityLog(
+  { module: "auth", action: "login" },
 
+  async (context, input: unknown) => {
+    const { email, password } = LoginSchema.parse(input);
+
+    const beforeData = { email };
+
+    const user = await findUserByEmailModel(email, true);
     if (!user) {
       throw new ResponsError(Code.NOT_FOUND, "user not found, please register");
     }
@@ -18,19 +29,19 @@ export const loginUserService = withActivityLog({module: "auth", action: "login"
     if (user.is_delete) {
       throw new ResponsError(
         Code.FORBIDDEN,
-        "user access revoked, contact your administrator or register with another way"
+        "user access revoked, contact administrator"
       );
     }
 
     if (user.source !== "email") {
       throw new ResponsError(
         Code.FORBIDDEN,
-        `this account was registered via ${user.source}, please use ${user.source} login`
+        `this account was registered via ${user.source}`
       );
     }
 
-    const isValid = await bcrypt.compare(password, user.password);
-    if (!isValid) {
+    const valid = await bcrypt.compare(password, user.password);
+    if (!valid) {
       throw new ResponsError(Code.BAD_REQUEST, "email or password is incorrect");
     }
 
@@ -41,23 +52,21 @@ export const loginUserService = withActivityLog({module: "auth", action: "login"
       email: user.email,
       roles: user.roles,
     });
-    const refreshToken = generateRefreshToken({ id: user.id });
 
+    const refreshToken = generateRefreshToken({ id: user.id });
     const expiresAt = getRefreshExpiresAt(toMs);
+
     await saveRefreshToken(user.id, refreshToken, expiresAt);
-    const afterData = {
-      userId: user.id,
-      is_verified: user.is_verified,
-    };
+
     return {
       userId: user.id,
       statusCode: Code.OK,
       beforeData,
-      afterData,
+      afterData: { userId: user.id },
       result: {
         accessToken,
         refreshToken,
-        user
+        user,
       },
       description: "user login successful",
     };

@@ -4,20 +4,31 @@ import { findModuleByNameModel } from "../models/engine-read";
 import { updateModuleStatusModel } from "../models/engine-update";
 import { engineRegistry } from "../controllers/engine-create";
 import { withActivityLog } from "../../activity/controllers/activity-wrapper";
-import { ActivityContextInterface } from "../../../interfaces/activity-interface";
+import { ActivityContext } from "../../activity/schema/activity-schema";
+import { EngineModuleNameSchema } from "../schema/engine-schema";
 
 const isCoreModule = (name: string): boolean => {
-  return engineRegistry.some((mod) => mod.name === name && mod.core);
+  return engineRegistry.some(
+    (mod) => mod.name === name && mod.core
+  );
 };
 
 export const toggleModuleService = withActivityLog(
-  { module: "engine", action: "toggle" },
+  { module: "engine", action: "toggle module" },
+  async (
+    context: ActivityContext,
+    name: string,
+    actorId?: string
+  ) => {
+    const parsed = EngineModuleNameSchema.parse({ name });
 
-  async (context: ActivityContextInterface, name: string, actorId?: string) => {
-    const before = await findModuleByNameModel(name);
+    const before = await findModuleByNameModel(parsed.name);
 
     if (!before) {
-      throw new ResponsError(Code.NOT_FOUND, `module ${name} not found`);
+      throw new ResponsError(
+        Code.NOT_FOUND,
+        `module ${parsed.name} not found`
+      );
     }
 
     const newInstalled = !before.installed;
@@ -29,22 +40,29 @@ export const toggleModuleService = withActivityLog(
       );
     }
 
-    const after = await updateModuleStatusModel(before.name, newInstalled);
+    const after = await updateModuleStatusModel({
+      id: before.id,
+      installed: newInstalled,
+    });
 
     return {
+      userId: actorId ?? null,
       result: after,
-      before: {
+      beforeData: {
         id: before.id,
         name: before.name,
         path: before.path,
         installed: before.installed,
       },
-      after: {
-        id: after.id,
-        name: after.name,
-        path: after.path,
-        installed: after.installed,
+      afterData: {
+        id: after!.id,
+        name: after!.name,
+        path: after!.path,
+        installed: after!.installed,
       },
+      description: `module ${before.name} ${
+        newInstalled ? "installed" : "uninstalled"
+      }`,
     };
   }
 );

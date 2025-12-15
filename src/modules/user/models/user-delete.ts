@@ -1,14 +1,13 @@
 import { config } from "../../../configs";
-import { UserInterface } from "../../../interfaces/user-interface";
+import { User } from "../schema/user-schema";
 
-export const softDeleteUserModel = async (id: string): Promise<void> => {
+export const softDeleteUserModel = async (id: unknown): Promise<void> => {
   await config.query(
     `
     UPDATE tb_user
-    SET 
-      is_delete = TRUE,
-      deleted_at = NOW(),
-      updated_at = NOW()
+    SET is_delete = TRUE,
+        deleted_at = NOW(),
+        updated_at = NOW()
     WHERE id = $1
     `,
     [id]
@@ -18,8 +17,8 @@ export const softDeleteUserModel = async (id: string): Promise<void> => {
 export const findDeletedUsersModel = async (
   limit: number,
   offset: number
-): Promise<UserInterface[]> => {
-  const result = await config.query(
+): Promise<User[]> => {
+  const result = await config.query<User>(
     `
     SELECT 
       u.*,
@@ -51,9 +50,9 @@ export const countDeletedUsersModel = async (): Promise<number> => {
 };
 
 export const hardDeleteUserModel = async (
-  id: string
-): Promise<UserInterface | null> => {
-  const result = await config.query(
+  id: unknown
+): Promise<User | null> => {
+  const result = await config.query<User>(
     `
     DELETE FROM tb_user
     WHERE id = $1

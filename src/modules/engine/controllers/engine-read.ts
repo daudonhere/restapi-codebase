@@ -10,7 +10,13 @@ export const getAllModulesController = async (
 ) => {
   try {
     const modules = await getAllModulesService();
-    return ResponsSuccess(res, Code.OK, "modules retrieved successfully", modules);
+
+    return ResponsSuccess(
+      res,
+      Code.OK,
+      "modules retrieved successfully",
+      modules
+    );
   } catch (err) {
     next(err);
   }

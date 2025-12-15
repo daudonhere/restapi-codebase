@@ -1,10 +1,19 @@
 import { config } from "../../../configs";
 
+export interface TokenRecord {
+  id: string;
+  user_id: string;
+  token: string;
+  type: "refresh" | "verify" | "reset";
+  created_at: Date;
+  expired_at: Date;
+}
+
 export const findTokenModel = async (
   token: string,
   type: "refresh" | "verify" | "reset"
-) => {
-  const result = await config.query(
+): Promise<TokenRecord | null> => {
+  const result = await config.query<TokenRecord>(
     `
     SELECT 
       id,

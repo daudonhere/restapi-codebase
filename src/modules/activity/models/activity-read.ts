@@ -1,8 +1,33 @@
 import { config } from "../../../configs";
-import { ActivityFilterInterface, ActivityLogInterface } from "../../../interfaces/activity-interface";
+import { ActivityFilter } from "../schema/activity-schema";
+
+export const buildActivityFilter = (filters: ActivityFilter) => {
+  const conditions: string[] = [];
+  const values: any[] = [];
+  let idx = 1;
+
+  const add = (field: string, value: any, operator = "=") => {
+    if (value !== undefined && value !== null) {
+      conditions.push(`${field} ${operator} $${idx++}`);
+      values.push(value);
+    }
+  };
+
+  add("module", filters.module);
+  add("action", filters.action);
+  add("user_id", filters.userId);
+  add("status", filters.status);
+  add("created_at", filters.dateFrom, ">=");
+  add("created_at", filters.dateTo, "<=");
+
+  const whereClause =
+    conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+
+  return { whereClause, values, idx };
+};
 
 export const countActivityLogModel = async (
-  filters: ActivityFilterInterface
+  filters: ActivityFilter
 ): Promise<number> => {
   const { whereClause, values } = buildActivityFilter(filters);
 
@@ -21,15 +46,11 @@ export const countActivityLogModel = async (
 export const findActivityLogModel = async (
   limit: number,
   offset: number,
-  filters: ActivityFilterInterface
+  filters: ActivityFilter
 ) => {
   const { whereClause, values, idx } = buildActivityFilter(filters);
 
-  const limitIndex = idx;
-  const offsetIndex = idx + 1;
-
-  values.push(limit);
-  values.push(offset);
+  values.push(limit, offset);
 
   const result = await config.query(
     `
@@ -48,7 +69,7 @@ export const findActivityLogModel = async (
     FROM tb_activity
     ${whereClause}
     ORDER BY created_at DESC
-    LIMIT $${limitIndex} OFFSET $${offsetIndex}
+    LIMIT $${idx} OFFSET $${idx + 1}
     `,
     values
   );
@@ -56,9 +77,7 @@ export const findActivityLogModel = async (
   return result.rows;
 };
 
-export const findActivityLogByIdModel = async (
-  id: string
-) => {
+export const findActivityLogByIdModel = async (id: string) => {
   const result = await config.query(
     `
     SELECT
@@ -83,29 +102,4 @@ export const findActivityLogByIdModel = async (
   );
 
   return result.rows[0] || null;
-};
-
-export const buildActivityFilter = (filters: any) => {
-  const conditions: string[] = [];
-  const values: any[] = [];
-  let idx = 1;
-
-  const addFilter = (field: string, value: any, operator = "=") => {
-    if (value !== undefined && value !== null) {
-      conditions.push(`${field} ${operator} $${idx++}`);
-      values.push(value);
-    }
-  };
-
-  addFilter("module", filters.module);
-  addFilter("action", filters.action);
-  addFilter("user_id", filters.userId);
-  addFilter("status", filters.status);
-  addFilter("created_at", filters.dateFrom, ">=");
-  addFilter("created_at", filters.dateTo, "<=");
-
-  const whereClause =
-    conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
-
-  return { whereClause, values, idx };
 };

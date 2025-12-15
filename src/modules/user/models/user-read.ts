@@ -1,11 +1,10 @@
 import { config } from "../../../configs";
-import { QueryResult } from "pg";
-import { UserInterface } from "../../../interfaces/user-interface";
+import { User } from "../schema/user-schema";
 
 export const findUserByIdModel = async (
-  id: string
-): Promise<UserInterface | null> => {
-  const result = await config.query(
+  id: unknown
+): Promise<User | null> => {
+  const result = await config.query<User>(
     `
     SELECT 
       u.*,
@@ -27,9 +26,9 @@ export const findUserByIdModel = async (
 };
 
 export const findUserByEmailModel = async (
-  email: string,
+  email: unknown,
   includeDeleted = false
-): Promise<UserInterface | null> => {
+): Promise<User | null> => {
   let query = `
     SELECT 
       u.*,
@@ -49,14 +48,14 @@ export const findUserByEmailModel = async (
 
   query += ` GROUP BY u.id`;
 
-  const result = await config.query(query, [email]);
+  const result = await config.query<User>(query, [email]);
   return result.rows[0] || null;
 };
 
 export const findUserByPhoneModel = async (
-  phone: string
-): Promise<UserInterface | null> => {
-  const result = await config.query(
+  phone: unknown
+): Promise<User | null> => {
+  const result = await config.query<User>(
     `
     SELECT *
     FROM tb_user
@@ -73,8 +72,8 @@ export const findUserByPhoneModel = async (
 export const findAllUsersModel = async (
   limit: number,
   offset: number
-): Promise<UserInterface[]> => {
-  const result = await config.query(
+): Promise<User[]> => {
+  const result = await config.query<User>(
     `
     SELECT 
       u.*,

@@ -1,12 +1,20 @@
+import { z } from "zod";
 import { config } from "../../../configs";
+import { RoleIdSchema } from "../schema/role-schema";
 
-export const deleteRoleModel = async (id: string): Promise<void> => {
-  await config.query(`DELETE FROM tb_role WHERE id = $1`, [id]);
+export const deleteRoleModel = async (id: unknown): Promise<void> => {
+  const parsed = RoleIdSchema.parse({ id });
+  await config.query(`DELETE FROM tb_role WHERE id = $1`, [parsed.id]);
 };
 
 export const deleteBulkRolesModel = async (
-  roleIds: string[]
+  roleIds: unknown
 ): Promise<{ deletedIds: string[]; skipped: Array<{ id: string; reason: string }> }> => {
+  
+  const { roleIds: ids } = z
+    .object({ roleIds: z.array(z.string().uuid()).min(1) })
+    .parse({ roleIds });
+
   const client = await config.connect();
   const skipped: Array<{ id: string; reason: string }> = [];
 
@@ -24,16 +32,12 @@ export const deleteBulkRolesModel = async (
       FROM tb_role r
       WHERE r.id = ANY($1::uuid[])
       `,
-      [roleIds]
+      [ids]
     );
-
-    if (rolesRes.rowCount === 0) {
-      return { deletedIds: [], skipped: roleIds.map(id => ({ id, reason: "not_found" })) };
-    }
 
     const validToDelete: string[] = [];
 
-    for (const roleId of roleIds) {
+    for (const roleId of ids) {
       const role = rolesRes.rows.find((x) => x.id === roleId);
 
       if (!role) {

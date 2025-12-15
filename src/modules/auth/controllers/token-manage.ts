@@ -2,6 +2,7 @@ import jwt, { SignOptions } from "jsonwebtoken";
 import dotenv from "dotenv";
 import { saveTokenModel } from "../models/token-create";
 import { deleteTokenModel, deleteTokenByUserAndTypeModel } from "../models/token-delete";
+import { Payload } from "../schema/auth-schema";
 
 dotenv.config();
 
@@ -10,7 +11,7 @@ const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "15m";
 const REFRESH_SECRET = process.env.REFRESH_TOKEN_SECRET || "default_refresh_secret";
 const REFRESH_TOKEN_EXPIRES_IN = process.env.REFRESH_TOKEN_EXPIRES_IN || "7d";
 
-export const generateAccessToken = (payload: { id: string; email: string; roles: string[] }): string => {
+export const generateAccessToken = (payload: Payload): string => {
   return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN as SignOptions["expiresIn"] });
 };
 

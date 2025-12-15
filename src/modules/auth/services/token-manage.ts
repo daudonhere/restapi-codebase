@@ -1,69 +1,75 @@
+import { RefreshTokenSchema } from "../schema/auth-schema";
 import { ResponsError } from "../../../constants/respons-error";
 import { Code } from "../../../constants/message-code";
 import { findTokenModel } from "../models/token-read";
 import { findUserByIdModel } from "../../user/models/user-read";
-import { generateAccessToken, decodeRefreshToken, revokeRefreshToken } from "../controllers/token-manage";
+import {
+  generateAccessToken,
+  decodeRefreshToken,
+  revokeRefreshToken,
+} from "../controllers/token-manage";
 import { withActivityLog } from "../../activity/controllers/activity-wrapper";
 
 export const refreshAccessTokenService = withActivityLog(
-  {
-    module: "auth",
-    action: "refresh token",
-  },
-  async (context, token: string) => {
-    const beforeData = { token };
-    const storedToken = await findTokenModel(token, "refresh");
-    if (!storedToken) {
-      throw new ResponsError(
-        Code.FORBIDDEN,
-        "refresh token not found or has been revoked"
-      );
+  { module: "auth", action: "refresh token" },
+
+  async (_context, token: string) => {
+    RefreshTokenSchema.parse({ token });
+
+    const stored = await findTokenModel(token, "refresh");
+    if (!stored) {
+      throw new ResponsError(Code.FORBIDDEN, "refresh token invalid");
     }
-    if (storedToken.expired_at < new Date()) {
+
+    if (stored.expired_at < new Date()) {
       throw new ResponsError(Code.UNAUTHORIZED, "refresh token expired");
     }
+
     const decoded = decodeRefreshToken(token);
     const user = await findUserByIdModel(decoded.id);
     if (!user) {
-      throw new ResponsError(Code.NOT_FOUND, "user not found for token");
+      throw new ResponsError(Code.NOT_FOUND, "user not found");
     }
+
     const accessToken = generateAccessToken({
       id: user.id,
       email: user.email,
       roles: user.roles,
     });
+
     return {
       userId: user.id,
-      beforeData,
-      afterData: { userId: user.id },
-      description: "access token refreshed successfully",
       statusCode: Code.OK,
+      beforeData: { token },
+      afterData: null,
       result: { accessToken },
+      description: "access token refreshed",
     };
   }
 );
 
 export const logoutUserService = withActivityLog(
-  {
-    module: "auth",
-    action: "logout",
-  },
-  async (context, token: string) => {
+  { module: "auth", action: "logout" },
+
+  async (_context, token: string) => {
+    RefreshTokenSchema.parse({ token });
+
     let userId: string | null = null;
     try {
-      const decoded = decodeRefreshToken(token);
-      userId = decoded.id;
+      userId = decodeRefreshToken(token).id;
     } catch {
       userId = null;
     }
+
     await revokeRefreshToken(token);
+
     return {
       userId,
+      statusCode: Code.OK,
       beforeData: { userId },
       afterData: null,
-      description: "user logged out and refresh token revoked",
-      statusCode: Code.OK,
       result: null,
+      description: "user logged out",
     };
   }
 );

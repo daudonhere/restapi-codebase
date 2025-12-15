@@ -1,12 +1,12 @@
 import { config } from "../../../configs";
-import { RoleInterface } from "../../../interfaces/role-interface";
+import { Role, UpdateRoleInputSchema } from "../schema/role-schema";
 
 export const updateRoleModel = async (
-  id: string,
-  name: string,
-  description: string | null
-): Promise<RoleInterface | null> => {
-  const result = await config.query<RoleInterface>(
+  input: unknown
+): Promise<Role | null> => {
+  const { id, name, description } = UpdateRoleInputSchema.parse(input);
+
+  const result = await config.query<Role>(
     `
     UPDATE tb_role
     SET

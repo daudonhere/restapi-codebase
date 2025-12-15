@@ -1,13 +1,15 @@
 import { Response, NextFunction } from "express";
+import {
+  uploadAvatarService,
+  updateUserCredentialService,
+  updateUserByIdService,
+  updateUserRolesService,
+} from "../services/user-update";
 import { findUserByIdService } from "../services/user-read";
-import { updateUserByIdService, updateUserRolesService } from "../services/user-update";
 import { Code } from "../../../constants/message-code";
-import { ResponsError } from "../../../constants/respons-error";
 import { ResponsSuccess } from "../../../constants/respons-success";
 import { AuthenticatedRequest } from "../../../middlewares/authenticate";
 import { sanitizeUser } from "../../../utils/sanitize";
-import { uploadAvatarService } from "../services/user-update";
-import { updateUserCredentialService } from "../services/user-update";
 
 export const uploadAvatarController = async (
   req: AuthenticatedRequest,
@@ -15,14 +17,8 @@ export const uploadAvatarController = async (
   next: NextFunction
 ) => {
   try {
-    const actor = req.user!;
-    const context = req.activityContext;
-    const file = req.file;
-
-    if (!context) throw new Error("activity context missing");
-
-    const data = await uploadAvatarService(context, actor.id, file);
-
+    const context = req.activityContext!;
+    const data = await uploadAvatarService(context, req.user!.id, req.file!);
     return ResponsSuccess(res, Code.OK, "avatar updated", data.result);
   } catch (err) {
     next(err);
@@ -35,14 +31,14 @@ export const updateUserCredentialController = async (
   next: NextFunction
 ) => {
   try {
-    const actor = req.user!;
-    const context = req.activityContext;
-
-    if (!context) throw new Error("activity context missing");
-
-    const updated = await updateUserCredentialService(context, actor.id, req.body, actor);
-
-    return ResponsSuccess(res, Code.OK, "credential updated successfully", updated);
+    const context = req.activityContext!;
+    const data = await updateUserCredentialService(
+      context,
+      req.user!.id,
+      req.body,
+      req.user!
+    );
+    return ResponsSuccess(res, Code.OK, "credential updated successfully", data);
   } catch (err) {
     next(err);
   }
@@ -54,34 +50,15 @@ export const updateUserByIdController = async (
   next: NextFunction
 ) => {
   try {
-    const actor = req.user!;
-    const context = req.activityContext;
-
-    if (!context) throw new Error("activity context missing");
-
-    const { fullname, phone, email, passphrase } = req.body;
-
-    if (!passphrase || typeof passphrase !== "string") {
-      throw new ResponsError(Code.BAD_REQUEST, "passphrase required");
-    }
-
-    const fields = { fullname, phone, email };
-
+    const context = req.activityContext!;
     const data = await updateUserByIdService(
       context,
-      actor.id,
-      fields,
-      actor,
-      passphrase.trim()
+      req.user!.id,
+      req.body,
+      req.user!,
+      req.body.passphrase
     );
-
-    return ResponsSuccess(
-      res,
-      Code.OK,
-      "user updated successfully",
-      data 
-    );
-
+    return ResponsSuccess(res, Code.OK, "user updated successfully", data);
   } catch (err) {
     next(err);
   }
@@ -93,16 +70,20 @@ export const updateUserRolesController = async (
   next: NextFunction
 ) => {
   try {
-    const { id } = req.params;
-    const { roles } = req.body; 
     const actor = await findUserByIdService(req.user!.id);
-    if (!actor) throw new ResponsError(Code.UNAUTHORIZED, "action requires valid user");
-
-    const context = req.activityContext;
-    if (!context) throw new Error("activity context missing");
-    const updated = await updateUserRolesService(context, id, roles, actor);
-    
-    return ResponsSuccess(res, Code.OK, "users role updated successfully", sanitizeUser(updated));
+    const context = req.activityContext!;
+    const updated = await updateUserRolesService(
+      context,
+      req.params.id,
+      req.body,
+      actor
+    );
+    return ResponsSuccess(
+      res,
+      Code.OK,
+      "user roles updated successfully",
+      sanitizeUser(updated)
+    );
   } catch (err) {
     next(err);
   }

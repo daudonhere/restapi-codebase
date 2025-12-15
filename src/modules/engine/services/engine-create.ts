@@ -8,25 +8,19 @@ export const autoRegisterModules = async () => {
     const exists = await findModuleByNameModel(mod.name);
 
     if (!exists) {
-      await createModuleModel(mod.name, mod.path, mod.core ? true : false);
-      console.log(`registered module ${mod.name}`);
+      await createModuleModel({
+        name: mod.name,
+        path: mod.path,
+        installed: Boolean(mod.core),
+      });
       continue;
     }
 
     if (mod.core && !exists.installed) {
-      await updateModuleStatusModel(exists.id, true);
-      console.log(`forced core module installed ${mod.name}`);
+      await updateModuleStatusModel({
+        id: exists.id,
+        installed: true,
+      });
     }
   }
-  console.log("module registry synchronized");
 };
-
-autoRegisterModules()
-  .then(() => {
-    console.log("engine modules synchronized");
-    process.exit(0);
-  })
-  .catch((err) => {
-    console.error("failed to synchronize modules ", err);
-    process.exit(1);
-  });

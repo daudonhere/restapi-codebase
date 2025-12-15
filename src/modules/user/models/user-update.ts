@@ -1,184 +1,127 @@
 import { config } from "../../../configs";
-import { Code } from "../../../constants/message-code";
-import { ResponsError } from "../../../constants/respons-error";
+import { User } from "../schema/user-schema";
 
-export const updateUserAvatarModel = async (
-  id: string,
-  avatarUrl: string
-) => {
-  const result = await config.query(
-    `
-    UPDATE tb_user
-    SET 
-      avatar = $1,
-      updated_at = NOW()
-    WHERE id = $2
-    RETURNING *
-    `,
-    [avatarUrl, id]
-  );
-
-  return result.rows[0] || null;
-};
-
-export const updateUserCredentialModel = async (
-  id: string,
-  data: Record<string, any>
-): Promise<string> => {
-  const client = await config.connect();
-
-  try {
-    await client.query("BEGIN");
-
-    const { pin, frequency, code, password } = data;
-
-    const result = await client.query(
-      `
-      UPDATE tb_user
-      SET 
-        pin        = COALESCE($1, pin),
-        frequency  = COALESCE($2, frequency),
-        code       = COALESCE($3, code),
-        password   = COALESCE($4, password),
-        is_verified = FALSE,
-        updated_at = NOW()
-      WHERE id = $5
-      RETURNING id
-      `,
-      [pin, frequency, code, password, id]
-    );
-
-    if (result.rowCount === 0) {
-      throw new Error("User not found");
-    }
-
-    await client.query("COMMIT");
-    return result.rows[0].id;
-
-  } catch (err) {
-    await client.query("ROLLBACK");
-    throw err;
-
-  } finally {
-    client.release();
-  }
-};
-
-export const updateUserByIdModel = async (
-  id: string,
-  data: Record<string, any>
-) => {
-  const client = await config.connect();
-
-  try {
-    await client.query("BEGIN");
-
-    const { fullname, email, phone, resetVerification } = data;
-
-    const result = await client.query(
-      `
-      UPDATE tb_user
-      SET 
-        fullname   = COALESCE($1, fullname),
-        email      = COALESCE($2, email),
-        phone      = COALESCE($3, phone),
-        is_verified = CASE 
-            WHEN $4 = TRUE THEN FALSE 
-            ELSE is_verified 
-        END,
-        updated_at = NOW()
-      WHERE id = $5
-      RETURNING *
-      `,
-      [fullname, email, phone, resetVerification, id]
-    );
-
-    if (result.rowCount === 0) {
-      throw new Error("User not found");
-    }
-
-    await client.query("COMMIT");
-    return result.rows[0];
-
-  } catch (err) {
-    await client.query("ROLLBACK");
-    throw err;
-
-  } finally {
-    client.release();
-  }
-};
-
-export const updateLastLoginModel = async (
-  id: string
-): Promise<void> => {
+export const updateLastLoginModel = async (id: unknown): Promise<void> => {
   await config.query(
     `
     UPDATE tb_user
-    SET 
-      login_at = NOW(),
-      updated_at = NOW()
+    SET login_at = NOW(),
+        updated_at = NOW()
     WHERE id = $1
     `,
     [id]
   );
 };
 
+export const updateUserByIdModel = async (
+  id: unknown,
+  payload: {
+    fullname: string | null;
+    phone: string | null;
+    email: string | null;
+    resetVerification: boolean;
+  }
+): Promise<User> => {
+  const result = await config.query<User>(
+    `
+    UPDATE tb_user
+    SET
+      fullname = $1,
+      phone = $2,
+      email = COALESCE($3, email),
+      is_verified = CASE WHEN $4 THEN FALSE ELSE is_verified END,
+      updated_at = NOW()
+    WHERE id = $5
+    RETURNING *
+    `,
+    [
+      payload.fullname,
+      payload.phone,
+      payload.email,
+      payload.resetVerification,
+      id,
+    ]
+  );
+
+  return result.rows[0];
+};
+
+export const updateUserCredentialModel = async (
+  id: unknown,
+  data: Record<string, any>
+): Promise<string> => {
+  const fields = [];
+  const values = [];
+  let idx = 1;
+
+  for (const key of Object.keys(data)) {
+    fields.push(`${key} = $${idx++}`);
+    values.push(data[key]);
+  }
+
+  const result = await config.query(
+    `
+    UPDATE tb_user
+    SET ${fields.join(", ")},
+        updated_at = NOW()
+    WHERE id = $${idx}
+    RETURNING id
+    `,
+    [...values, id]
+  );
+
+  return result.rows[0].id;
+};
+
 export const updateUserRolesModel = async (
-  id: string,
+  id: unknown,
   roles: string[]
 ): Promise<void> => {
   const client = await config.connect();
-
   try {
     await client.query("BEGIN");
 
-    const roleNamesRes = await client.query(
-      `
-      SELECT name 
-      FROM tb_role 
-      WHERE name = ANY($1::varchar[])
-      `,
-      [roles]
-    );
-
-    const validRoles = roleNamesRes.rows.map((r) => r.name);
-    const invalidRoles = roles.filter((r) => !validRoles.includes(r));
-
-    if (invalidRoles.length > 0) {
-      throw new ResponsError(
-        Code.BAD_REQUEST,
-        `invalid roles: ${invalidRoles.join(", ")}`
-      );
-    }
-
     await client.query(
-      `
-      DELETE FROM tb_user_role 
-      WHERE user_id = $1
-      `,
+      `DELETE FROM tb_user_role WHERE user_id = $1`,
       [id]
     );
 
-    if (validRoles.length > 0) {
-      await client.query(
-        `
-        INSERT INTO tb_user_role (user_id, role_id)
-        SELECT $1, id
-        FROM tb_role 
-        WHERE name = ANY($2::varchar[])
-        `,
-        [id, validRoles]
+    for (const role of roles) {
+      const res = await client.query(
+        `SELECT id FROM tb_role WHERE name = $1 LIMIT 1`,
+        [role]
       );
+      if (res.rowCount) {
+        await client.query(
+          `INSERT INTO tb_user_role (user_id, role_id) VALUES ($1, $2)`,
+          [id, res.rows[0].id]
+        );
+      }
     }
 
     await client.query("COMMIT");
-
   } catch (err) {
     await client.query("ROLLBACK");
     throw err;
-
   } finally {
     client.release();
   }
+};
+
+export const updateUserAvatarModel = async (
+  id: unknown,
+  avatar: string
+): Promise<User> => {
+  const result = await config.query<User>(
+    `
+    UPDATE tb_user
+    SET avatar = $1,
+        updated_at = NOW()
+    WHERE id = $2
+    RETURNING *
+    `,
+    [avatar, id]
+  );
+
+  return result.rows[0];
 };

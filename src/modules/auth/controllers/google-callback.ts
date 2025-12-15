@@ -5,6 +5,7 @@ import { ResponsSuccess } from "../../../constants/respons-success";
 import { ResponsError } from "../../../constants/respons-error";
 import { Code } from "../../../constants/message-code";
 import { toMs } from "../controllers/token-manage";
+import { OAuthCallbackSchema } from "../schema/auth-schema";
 
 const REFRESH_TOKEN_EXPIRES_IN = process.env.REFRESH_TOKEN_EXPIRES_IN || "7d";
 
@@ -14,26 +15,19 @@ export const googleCallbackController = async (
   next: NextFunction
 ): Promise<Response | void> => {
   try {
-    const { code, error, error_description } = req.query;
+    const query = OAuthCallbackSchema.parse(req.query);
 
-    if (error) {
+    if (query.error) {
       throw new ResponsError(
         Code.BAD_REQUEST,
-        `Google OAuth error: ${error_description || error}`
-      );
-    }
-
-    if (!code || typeof code !== "string") {
-      throw new ResponsError(
-        Code.BAD_REQUEST,
-        "authorization code not provided or invalid"
+        `Google OAuth error: ${query.error_description || query.error}`
       );
     }
 
     const context = req.activityContext;
     if (!context) throw new Error("activity context missing");
 
-    const data = await handleGoogleLoginService(context, code);
+    const data = await handleGoogleLoginService(context, query.code);
 
     const { accessToken, refreshToken, user } = data;
 

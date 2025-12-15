@@ -1,11 +1,16 @@
 import { config } from "../../../configs";
+import {
+  CreateEngineModuleSchema,
+  EngineModule,
+} from "../schema/engine-schema";
 
 export const createModuleModel = async (
-  name: string,
-  path: string,
-  installed: boolean
-) => {
-  const result = await config.query(
+  input: unknown
+): Promise<EngineModule> => {
+  const { name, path, installed } =
+    CreateEngineModuleSchema.parse(input);
+
+  const result = await config.query<EngineModule>(
     `
     INSERT INTO tb_engine (name, path, installed)
     VALUES ($1, $2, $3)
@@ -13,5 +18,6 @@ export const createModuleModel = async (
     `,
     [name, path, installed]
   );
+
   return result.rows[0];
 };

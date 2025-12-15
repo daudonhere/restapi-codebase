@@ -1,21 +1,56 @@
 import { ResponsError } from "../../../constants/respons-error";
 import { Code } from "../../../constants/message-code";
-import { UserInterface } from "../../../interfaces/user-interface";
+import {
+  softDeleteUserModel,
+  hardDeleteUserModel,
+  countDeletedUsersModel,
+  findDeletedUsersModel,
+} from "../models/user-delete";
 import { findUserByIdModel } from "../models/user-read";
-import { softDeleteUserModel, hardDeleteUserModel, countDeletedUsersModel, findDeletedUsersModel } from "../models/user-delete";
 import { getPagination, buildMeta } from "../../../utils/pagination";
 import { withActivityLog } from "../../activity/controllers/activity-wrapper";
+import { User } from "../schema/user-schema";
 
-export const findDeletedUsersService = async (page: number, limit: number) => {
+export const findDeletedUsersService = async (
+  page: number,
+  limit: number
+) => {
   const totalData = await countDeletedUsersModel();
   const { offset } = getPagination(page, limit);
   const users = await findDeletedUsersModel(limit, offset);
   return { users, meta: buildMeta(page, limit, totalData) };
 };
 
+export const deleteUserByIdService = withActivityLog(
+  { module: "user", action: "delete user" },
+  async (_context, userId: string, actor: User) => {
+    if (actor.id === userId) {
+      throw new ResponsError(Code.FORBIDDEN, "cannot delete self");
+    }
+
+    const user = await findUserByIdModel(userId);
+    if (!user) {
+      throw new ResponsError(Code.NOT_FOUND, "user not found");
+    }
+
+    if (user.roles.includes("superadmin")) {
+      throw new ResponsError(Code.FORBIDDEN, "cannot delete superadmin");
+    }
+
+    await softDeleteUserModel(userId);
+
+    return {
+      userId: actor.id,
+      statusCode: Code.OK,
+      result: null,
+      description: `user ${userId} deleted`,
+    };
+  }
+);
+
 export const deleteBulkUsersService = withActivityLog(
   { module: "user", action: "bulk delete user" },
-  async (context, ids: string[], actor: UserInterface) => {
+  async (_context, ids: string[], actor: User) => {
     if (
       !actor.roles.includes("superadmin") &&
       !actor.roles.includes("administrator")
@@ -24,12 +59,12 @@ export const deleteBulkUsersService = withActivityLog(
     }
 
     if (!Array.isArray(ids) || ids.length === 0) {
-      throw new ResponsError(Code.BAD_REQUEST, "ids must be array");
+      throw new ResponsError(Code.BAD_REQUEST, "ids must be non-empty array");
     }
 
     let deleted = 0;
     const skipped: string[] = [];
-    
+
     let hasForbidden = false;
     let hasNotFound = false;
 
@@ -41,7 +76,6 @@ export const deleteBulkUsersService = withActivityLog(
       }
 
       const target = await findUserByIdModel(id);
-
       if (!target) {
         skipped.push(id);
         hasNotFound = true;
@@ -52,19 +86,15 @@ export const deleteBulkUsersService = withActivityLog(
       const targetIsSuper = target.roles.includes("superadmin");
       const targetIsAdmin = target.roles.includes("administrator");
 
-      let isAllowed = false;
+      let allowed = false;
 
       if (actorIsSuper) {
-        if (!targetIsSuper) {
-          isAllowed = true;
-        }
+        if (!targetIsSuper) allowed = true;
       } else {
-        if (!targetIsSuper && !targetIsAdmin) {
-          isAllowed = true;
-        }
+        if (!targetIsSuper && !targetIsAdmin) allowed = true;
       }
 
-      if (!isAllowed) {
+      if (!allowed) {
         skipped.push(id);
         hasForbidden = true;
         continue;
@@ -75,7 +105,10 @@ export const deleteBulkUsersService = withActivityLog(
     }
 
     if (deleted === 0 && hasForbidden) {
-      throw new ResponsError(Code.FORBIDDEN, "forbidden: cannot delete self or higher role");
+      throw new ResponsError(
+        Code.FORBIDDEN,
+        "forbidden: cannot delete self or higher role"
+      );
     }
 
     if (deleted === 0 && hasNotFound) {
@@ -83,70 +116,35 @@ export const deleteBulkUsersService = withActivityLog(
     }
 
     let description = "bulk delete completed";
-    
     if (hasForbidden) {
-      description = "bulk delete completed but some user cant be deleted";
+      description = "bulk delete completed but some users cannot be deleted";
     } else if (hasNotFound) {
-      description = "bulk delete completed but some user not found";
+      description = "bulk delete completed but some users not found";
     }
 
-    const resultPayload = {
-      deleted,
-      skipped,
-      message: description
-    };
-
     return {
       userId: actor.id,
       statusCode: Code.OK,
-      beforeData: { ids },
-      afterData: { deleted, skipped },
-      result: resultPayload,
-      description: description
-    };
-  }
-);
-
-export const deleteUserByIdService = withActivityLog(
-  { module: "user", action: "delete user" },
-  async (context, idToDelete: string, actor: UserInterface) => {
-    if (actor.id === idToDelete)
-      throw new ResponsError(Code.FORBIDDEN, "cannot delete self");
-    const user = await findUserByIdModel(idToDelete);
-    if (!user) throw new ResponsError(Code.NOT_FOUND, "not found");
-
-    if (user.roles.includes("superadmin"))
-      throw new ResponsError(Code.FORBIDDEN, "cannot delete superadmin");
-    const beforeData = {
-      id: user.id,
-      email: user.email,
-      fullname: user.fullname,
-      roles: user.roles
-    };
-    await softDeleteUserModel(idToDelete);
-
-    return {
-      userId: actor.id,
-      statusCode: Code.OK,
-      beforeData,
-      afterData: { deleted: true },
-      result: null,
-      description: `user ${idToDelete} deleted`
+      result: {
+        deleted,
+        skipped,
+        message: description,
+      },
+      description,
     };
   }
 );
 
 export const hardDeleteUserService = withActivityLog(
   { module: "user", action: "destroy user" },
-  async (context, id: string) => {
-    const deleted = await hardDeleteUserModel(id);
+  async (_context, userId: string) => {
+    await hardDeleteUserModel(userId);
+
     return {
       userId: null,
       statusCode: Code.OK,
-      beforeData: deleted ? { id: deleted.id, email: deleted.email } : { id },
-      afterData: null,
       result: null,
-      description: "user permanently deleted"
+      description: "user permanently deleted",
     };
   }
 );

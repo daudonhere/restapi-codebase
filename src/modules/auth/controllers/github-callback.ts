@@ -5,6 +5,7 @@ import { ResponsSuccess } from "../../../constants/respons-success";
 import { ResponsError } from "../../../constants/respons-error";
 import { Code } from "../../../constants/message-code";
 import { toMs } from "../controllers/token-manage";
+import { OAuthCallbackSchema } from "../schema/auth-schema";
 
 const REFRESH_TOKEN_EXPIRES_IN = process.env.REFRESH_TOKEN_EXPIRES_IN || "7d";
 
@@ -14,25 +15,18 @@ export const githubCallbackController = async (
   next: NextFunction
 ): Promise<Response | void> => {
   try {
-    const { code, error, error_description } = req.query;
-    if (error) {
+    const query = OAuthCallbackSchema.parse(req.query);
+    if (query.error) {
       throw new ResponsError(
         Code.BAD_REQUEST,
-        `GitHub OAuth error: ${error_description || error}`
-      );
-    }
-
-    if (!code || typeof code !== "string") {
-      throw new ResponsError(
-        Code.BAD_REQUEST,
-        "authorization code not provided or invalid"
+        `GitHub OAuth error: ${query.error_description || query.error}`
       );
     }
 
     const context = req.activityContext;
     if (!context) throw new Error("activity context missing");
 
-    const data = await processGithubLoginService(context, code);
+    const data = await processGithubLoginService(context, query.code);
 
     const { accessToken, refreshToken, user } = data;
 

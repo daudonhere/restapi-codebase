@@ -1,8 +1,8 @@
 import { config } from "../../../configs";
-import { ActivityLogPayloadInterface } from "../../../interfaces/activity-interface";
+import { ActivityLogPayload } from "../schema/activity-schema";
 
 export const writeActivityLogModel = async (
-  payload: ActivityLogPayloadInterface
+  payload: ActivityLogPayload
 ): Promise<string | null> => {
   try {
     const result = await config.query(
@@ -24,17 +24,16 @@ export const writeActivityLogModel = async (
         payload.method,
         payload.statusCode,
         payload.status,
-        payload.ipAddress ?? null,
-        payload.userAgent ?? null,
-        payload.beforeData ?? null,
-        payload.afterData ?? null,
-        payload.description ?? null,
+        payload.ipAddress,
+        payload.userAgent,
+        payload.beforeData,
+        payload.afterData,
+        payload.description,
       ]
     );
 
     return result.rows[0]?.id ?? null;
-  } catch (err) {
-    console.error("Failed to write activity log cause", err);
+  } catch {
     return null;
   }
 };
